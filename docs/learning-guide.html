@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distributed Metrics System — Interactive Learning Guide</title>
+<style>
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#242736; --border:#2e3149;
+  --text:#e2e8f0; --muted:#8892a4; --primary:#6366f1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:20px;flex-shrink:0}
+header h1{font-size:17px;font-weight:700;white-space:nowrap}
+.tabs{display:flex;gap:3px}
+.tab-btn{padding:6px 14px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;transition:all .15s}
+.tab-btn:hover{background:var(--surface2);color:var(--text)}
+.tab-btn.active{background:var(--surface2);color:#818cf8}
+.main{flex:1;display:flex;overflow:hidden}
+.tab-pane{display:none;flex:1;overflow:hidden}
+.tab-pane.active{display:flex}
+
+/* ARCH TAB */
+.diagram-wrap{flex:1;overflow:auto;padding:16px;position:relative}
+.side-panel{width:300px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:18px}
+.side-panel .hint{color:var(--muted);font-size:13px;text-align:center;margin-top:50px;line-height:1.8}
+.node{cursor:pointer}
+.node rect,.node ellipse{transition:filter .15s}
+.node:hover rect,.node:hover ellipse,.node.sel rect,.node.sel ellipse{filter:brightness(1.4) drop-shadow(0 0 6px currentColor)}
+
+/* JOURNEY TAB */
+#journey-pane{flex-direction:column;overflow:hidden}
+.journey-bar{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.journey-bar span{font-size:12px;color:var(--muted);margin-right:4px}
+.jbtn{padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;transition:all .15s}
+.jbtn.active{border-color:#6366f1;color:#818cf8;background:rgba(99,102,241,.1)}
+.jbtn:hover{border-color:#6366f1}
+.journey-body{flex:1;overflow-y:auto;padding:24px}
+.step-list{list-style:none;counter-reset:s}
+.step-list li{counter-increment:s;display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.7}
+.step-list li:last-child{border-bottom:none}
+.step-list li::before{content:counter(s);min-width:26px;height:26px;border-radius:50%;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.step-title{font-weight:600;margin-bottom:3px;font-size:14px}
+
+/* COMPONENTS TAB */
+#components-pane{overflow-y:auto;flex-direction:column;padding:20px}
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.comp-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.comp-card h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.comp-card p{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px}
+.prop-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px}
+.prop-row:last-child{border-bottom:none}
+.prop-key{color:var(--muted)}
+.prop-val{font-family:monospace;color:#7dd3fc;text-align:right}
+
+/* KAFKA TAB */
+#kafka-pane{overflow-y:auto;flex-direction:column;padding:20px}
+.kafka-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:14px}
+.kafka-card{background:var(--surface);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:18px}
+.kafka-card h3{font-size:14px;font-family:monospace;color:#34d399;margin-bottom:10px}
+.flow-line{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:10px}
+.prod{color:#60a5fa}.cons{color:#f87171}.arr{color:var(--muted)}
+.kafka-card p{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px}
+.fields{background:var(--surface2);border-radius:7px;padding:10px;border:1px solid var(--border)}
+.fields .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.field{font-size:11px;font-family:monospace;color:#c4b5fd;padding:2px 0}
+
+/* Badges */
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa}
+.b-green{background:rgba(16,185,129,.15);color:#34d399}
+.b-orange{background:rgba(245,158,11,.15);color:#fbbf24}
+.b-red{background:rgba(239,68,68,.15);color:#f87171}
+.b-purple{background:rgba(139,92,246,.15);color:#a78bfa}
+.b-teal{background:rgba(20,184,166,.15);color:#2dd4bf}
+.b-yellow{background:rgba(234,179,8,.15);color:#facc15}
+.b-gray{background:var(--surface2);color:var(--muted)}
+
+code{font-family:monospace;font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:#7dd3fc}
+pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;overflow-x:auto;color:#a5f3fc;line-height:1.6;border:1px solid var(--border);margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Distributed Metrics System</h1>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('arch',this)">Architecture</button>
+    <button class="tab-btn" onclick="showTab('journey',this)">Data Journeys</button>
+    <button class="tab-btn" onclick="showTab('components',this)">Components</button>
+    <button class="tab-btn" onclick="showTab('kafka',this)">Kafka Topics</button>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- ═══ ARCHITECTURE TAB ═══ -->
+<div id="arch-pane" class="tab-pane active">
+  <div class="diagram-wrap">
+    <!-- Legend -->
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--muted)">
+      <span>⬛ <span style="color:#60a5fa">Spring Boot</span></span>
+      <span>⬛ <span style="color:#34d399">Kafka Topic</span></span>
+      <span>⬛ <span style="color:#fbbf24">Apache Flink</span></span>
+      <span>⬛ <span style="color:#f87171">Apache Spark</span></span>
+      <span>⬛ <span style="color:#a78bfa">Database</span></span>
+      <span>⬛ <span style="color:#2dd4bf">MinIO</span></span>
+      <span>⬛ <span style="color:#facc15">HDFS</span></span>
+      <span style="margin-left:8px">Click any node →</span>
+    </div>
+
+    <svg id="svg" viewBox="0 0 1060 610" style="width:100%;min-width:760px">
+      <defs>
+        <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#4b5563"/>
+        </marker>
+        <marker id="arr-b" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#60a5fa"/>
+        </marker>
+        <marker id="arr-g" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#34d399"/>
+        </marker>
+        <marker id="arr-y" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#fbbf24"/>
+        </marker>
+        <marker id="arr-r" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#ef4444"/>
+        </marker>
+        <marker id="arr-t" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#14b8a6"/>
+        </marker>
+        <marker id="arr-h" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#eab308"/>
+        </marker>
+      </defs>
+
+      <!-- ── EDGES ── -->
+      <!-- sources → collector -->
+      <path id="p0" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-b)" d="M215,78 C215,105 370,105 370,120"/>
+      <path id="p1" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-b)" d="M575,78 C575,105 490,105 490,120"/>
+      <!-- collector → kafka topics -->
+      <path id="p2" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M358,172 C300,200 240,210 215,224"/>
+      <path id="p3" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M420,172 L415,224"/>
+      <!-- kafka-structured → processor -->
+      <path id="p4" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M182,268 L182,322"/>
+      <!-- processor → postgres (dashed, enrichment lookup) -->
+      <path id="p5" class="ep" stroke="#a78bfa" stroke-width="1.2" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr)" d="M155,372 C130,400 108,415 106,424"/>
+      <!-- processor → kafka-normalized -->
+      <path id="p6" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M252,348 C360,330 480,280 528,268"/>
+      <!-- postgres → Debezium → kafka-cdc (dashed CDC path) -->
+      <path id="p7" class="ep" stroke="#34d399" stroke-width="1.2" fill="none" stroke-opacity=".35" stroke-dasharray="5,4" marker-end="url(#arr-g)" d="M176,424 C400,380 680,290 743,264"/>
+      <!-- kafka-logs → flink -->
+      <path id="p8" class="ep" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-y)" d="M435,268 C445,295 455,310 460,318"/>
+      <!-- kafka-normalized → flink -->
+      <path id="p9" class="ep" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-y)" d="M572,268 L562,318"/>
+      <!-- kafka-cdc → flink (broadcast, dashed) -->
+      <path id="p10" class="ep" stroke="#fbbf24" stroke-width="1.2" fill="none" stroke-opacity=".35" stroke-dasharray="5,4" marker-end="url(#arr-y)" d="M827,268 C780,300 650,315 650,318"/>
+      <!-- flink → timescale -->
+      <path id="p11" class="ep" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr)" d="M510,376 C470,400 400,420 358,424"/>
+      <!-- flink → minio -->
+      <path id="p12" class="ep" stroke="#14b8a6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-t)" d="M590,376 C630,405 675,420 692,424"/>
+      <!-- flink → hdfs-raw -->
+      <path id="p13" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M548,376 L545,424"/>
+      <!-- hdfs-raw → spark -->
+      <path id="p14" class="ep" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-r)" d="M558,472 C570,495 595,515 600,524"/>
+      <!-- spark → hdfs-parquet -->
+      <path id="p15" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M693,550 L742,550"/>
+      <!-- timescale → gateway -->
+      <path id="p16" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-b)" d="M345,472 C325,498 295,518 278,524"/>
+      <!-- minio → gateway -->
+      <path id="p17" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".4" marker-end="url(#arr-b)" d="M695,452 C560,480 380,530 342,548"/>
+
+      <!-- Edge labels -->
+      <text x="290" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
+      <text x="440" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
+      <text x="113" y="302" fill="#34d399" font-size="9" opacity=".6">consume</text>
+      <text x="118" y="400" fill="#a78bfa" font-size="9" opacity=".6" transform="rotate(-50,118,400)">enrich lookup</text>
+      <text x="355" y="322" fill="#34d399" font-size="9" opacity=".6">normalized</text>
+      <text x="350" y="374" fill="#a16207" font-size="9" opacity=".6">Debezium CDC</text>
+      <text x="468" y="306" fill="#fbbf24" font-size="9" opacity=".6">P2</text>
+      <text x="574" y="298" fill="#fbbf24" font-size="9" opacity=".6">P1</text>
+      <text x="700" y="310" fill="#fbbf24" font-size="9" opacity=".6">broadcast</text>
+      <text x="400" y="412" fill="#a78bfa" font-size="9" opacity=".6">JDBC upsert</text>
+      <text x="628" y="408" fill="#14b8a6" font-size="9" opacity=".6">Parquet FileSink</text>
+      <text x="548" y="408" fill="#a16207" font-size="9" opacity=".6">rolling txt</text>
+      <text x="572" y="505" fill="#ef4444" font-size="9" opacity=".6">batch read</text>
+      <text x="695" y="542" fill="#a16207" font-size="9" opacity=".6">write Parquet</text>
+
+      <!-- ── NODES ── -->
+
+      <!-- Row 0: data sources -->
+      <g id="n-struct" class="node" onclick="pick('struct')">
+        <rect x="120" y="28" width="190" height="50" rx="9" fill="#0f2044" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="215" y="49" text-anchor="middle" fill="#93c5fd" font-size="13" font-weight="600">Structured Data</text>
+        <text x="215" y="66" text-anchor="middle" fill="#1e40af" font-size="10">JSON / Avro / Protobuf</text>
+      </g>
+
+      <g id="n-logsrc" class="node" onclick="pick('logsrc')">
+        <rect x="490" y="28" width="170" height="50" rx="9" fill="#0f2044" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="575" y="49" text-anchor="middle" fill="#93c5fd" font-size="13" font-weight="600">Log / Text Data</text>
+        <text x="575" y="66" text-anchor="middle" fill="#1e40af" font-size="10">raw lines, binary</text>
+      </g>
+
+      <!-- Row 1: collector -->
+      <g id="n-collector" class="node" onclick="pick('collector')">
+        <rect x="305" y="120" width="210" height="52" rx="9" fill="#172554" stroke="#3b82f6" stroke-width="2"/>
+        <text x="410" y="141" text-anchor="middle" fill="#60a5fa" font-size="13" font-weight="700">metrics-collector</text>
+        <text x="410" y="158" text-anchor="middle" fill="#3b82f6" font-size="10">Spring Boot · :8081</text>
+      </g>
+
+      <!-- Row 2: Kafka topics -->
+      <g id="n-kstruct" class="node" onclick="pick('kstruct')">
+        <rect x="96" y="224" width="172" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="182" y="243" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">metrics.structured</text>
+        <text x="182" y="258" text-anchor="middle" fill="#064e3b" font-size="10">Kafka topic</text>
+      </g>
+
+      <g id="n-klogs" class="node" onclick="pick('klogs')">
+        <rect x="352" y="224" width="126" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="415" y="243" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">logs.raw</text>
+        <text x="415" y="258" text-anchor="middle" fill="#064e3b" font-size="10">Kafka topic</text>
+      </g>
+
+      <g id="n-knorm" class="node" onclick="pick('knorm')">
+        <rect x="490" y="224" width="170" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="575" y="243" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">metrics.normalized</text>
+        <text x="575" y="258" text-anchor="middle" fill="#064e3b" font-size="10">Kafka topic</text>
+      </g>
+
+      <g id="n-kcdc" class="node" onclick="pick('kcdc')">
+        <rect x="736" y="224" width="182" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="827" y="241" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">cdc.public</text>
+        <text x="827" y="255" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">.service_metadata</text>
+      </g>
+
+      <!-- Row 3: processor + flink -->
+      <g id="n-processor" class="node" onclick="pick('processor')">
+        <rect x="96" y="322" width="200" height="50" rx="9" fill="#172554" stroke="#3b82f6" stroke-width="2"/>
+        <text x="196" y="342" text-anchor="middle" fill="#60a5fa" font-size="13" font-weight="700">metrics-processor</text>
+        <text x="196" y="359" text-anchor="middle" fill="#3b82f6" font-size="10">Spring Boot · :8082</text>
+      </g>
+
+      <g id="n-flink" class="node" onclick="pick('flink')">
+        <rect x="452" y="318" width="206" height="58" rx="9" fill="#27140a" stroke="#f59e0b" stroke-width="2"/>
+        <text x="555" y="338" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700">Flink Job</text>
+        <text x="555" y="355" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 1 — windowed aggregation</text>
+        <text x="555" y="368" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 2 — log archival to HDFS</text>
+      </g>
+
+      <!-- Row 4: storage -->
+      <g id="n-postgres" class="node" onclick="pick('postgres')">
+        <rect x="30" y="424" width="152" height="48" rx="7" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="106" y="444" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600">PostgreSQL</text>
+        <text x="106" y="460" text-anchor="middle" fill="#4c1d95" font-size="10">enrichment + CDC · :5432</text>
+      </g>
+
+      <g id="n-timescale" class="node" onclick="pick('timescale')">
+        <rect x="270" y="424" width="152" height="48" rx="7" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="346" y="444" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600">TimescaleDB</text>
+        <text x="346" y="460" text-anchor="middle" fill="#4c1d95" font-size="10">time-series · :5433</text>
+      </g>
+
+      <g id="n-hdfsraw" class="node" onclick="pick('hdfsraw')">
+        <rect x="474" y="424" width="148" height="48" rx="7" fill="#1c1400" stroke="#eab308" stroke-width="1.5"/>
+        <text x="548" y="444" text-anchor="middle" fill="#facc15" font-size="12" font-weight="600">HDFS</text>
+        <text x="548" y="460" text-anchor="middle" fill="#854d0e" font-size="10">raw .txt log files</text>
+      </g>
+
+      <g id="n-minio" class="node" onclick="pick('minio')">
+        <rect x="672" y="424" width="140" height="48" rx="7" fill="#022020" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="742" y="444" text-anchor="middle" fill="#2dd4bf" font-size="12" font-weight="600">MinIO</text>
+        <text x="742" y="460" text-anchor="middle" fill="#0f766e" font-size="10">Parquet · S3-compat · :9000</text>
+      </g>
+
+      <!-- Row 5: gateway + spark + hdfs-parquet -->
+      <g id="n-gateway" class="node" onclick="pick('gateway')">
+        <rect x="168" y="524" width="200" height="52" rx="9" fill="#172554" stroke="#3b82f6" stroke-width="2"/>
+        <text x="268" y="545" text-anchor="middle" fill="#60a5fa" font-size="13" font-weight="700">API Gateway</text>
+        <text x="268" y="562" text-anchor="middle" fill="#3b82f6" font-size="10">Spring Boot · :8083</text>
+      </g>
+
+      <g id="n-spark" class="node" onclick="pick('spark')">
+        <rect x="542" y="524" width="162" height="52" rx="9" fill="#280000" stroke="#ef4444" stroke-width="2"/>
+        <text x="623" y="545" text-anchor="middle" fill="#f87171" font-size="13" font-weight="700">Spark Job</text>
+        <text x="623" y="562" text-anchor="middle" fill="#991b1b" font-size="10">batch · spark-submit</text>
+      </g>
+
+      <g id="n-hdfspar" class="node" onclick="pick('hdfspar')">
+        <rect x="742" y="524" width="158" height="52" rx="7" fill="#1c1400" stroke="#eab308" stroke-width="1.5"/>
+        <text x="821" y="545" text-anchor="middle" fill="#facc15" font-size="12" font-weight="600">HDFS Parquet</text>
+        <text x="821" y="562" text-anchor="middle" fill="#854d0e" font-size="10">structured log records</text>
+      </g>
+
+      <!-- Animated packets layer -->
+      <g id="pkts"></g>
+    </svg>
+  </div>
+  <div class="side-panel" id="side-panel">
+    <p class="hint">👆 Click any node to<br>learn what it does,<br>what talks to it, and<br>see real code examples.</p>
+  </div>
+</div>
+
+<!-- ═══ JOURNEY TAB ═══ -->
+<div id="journey-pane" class="tab-pane">
+  <div class="journey-bar">
+    <span>Follow a data path:</span>
+    <button class="jbtn active" onclick="pickJourney(0,this)">📊 Structured Metric</button>
+    <button class="jbtn" onclick="pickJourney(1,this)">📝 Raw Log → Parquet</button>
+    <button class="jbtn" onclick="pickJourney(2,this)">🔄 CDC Enrichment</button>
+    <button class="jbtn" onclick="pickJourney(3,this)">🔍 API Query</button>
+  </div>
+  <div class="journey-body" id="journey-body"></div>
+</div>
+
+<!-- ═══ COMPONENTS TAB ═══ -->
+<div id="components-pane" class="tab-pane">
+  <div class="comp-grid" id="comp-grid"></div>
+</div>
+
+<!-- ═══ KAFKA TAB ═══ -->
+<div id="kafka-pane" class="tab-pane">
+  <div class="kafka-grid" id="kafka-grid"></div>
+</div>
+
+<script>
+// ─── NODE INFO ────────────────────────────────────────────────────────────────
+const INFO = {
+  struct:{title:"Structured Data Sources",badge:"Input",bc:"b-blue",
+    desc:"Services that emit metric events — app servers, infra agents, custom instrumentation. Payload must include metricName, value, unit, serviceId, tags, and timestamp.",
+    props:[["Endpoint","POST /api/v1/metrics"],["Batch","POST /api/v1/metrics/batch"],["Format","JSON"],["Kafka key","serviceId"]],
+    code:`{\n  "metricName": "http.request.duration",\n  "value": 142.5,\n  "unit": "ms",\n  "serviceId": "svc-api",\n  "tags": {"endpoint": "/checkout"},\n  "timestamp": "2024-01-15T10:30:00Z"\n}`},
+  logsrc:{title:"Log / Text Data Sources",badge:"Input",bc:"b-blue",
+    desc:"Any system emitting raw UTF-8 log lines — Log4j, SLF4J loggers, syslog, container stdout. Lines forwarded verbatim; no parsing at ingest time.",
+    props:[["Endpoint","POST /api/v1/logs"],["Content-Type","text/plain"],["Batch","JSON array of strings"],["Kafka key","source header"]],
+    code:`2024-01-15T10:30:00Z [INFO] [svc-api] Request done\n2024-01-15T10:30:01Z [ERROR] [svc-worker] NPE at line 42`},
+  collector:{title:"metrics-collector",badge:"Spring Boot :8081",bc:"b-blue",
+    desc:"Ingestion gateway. Validates structured events with Bean Validation, then publishes to Kafka. Raw logs are forwarded without parsing. High-throughput producer config: acks=all, linger=5ms, batch=64KB.",
+    props:[["Port","8081"],["Publishes to","metrics.structured, logs.raw"],["Producer acks","all"],["Batch size","65536 bytes"],["Linger","5 ms"]],
+    code:`kafkaTemplate.send(\n  "metrics.structured",\n  event.getServiceId(),   // partition key\n  objectMapper.writeValueAsString(event)\n);`},
+  kstruct:{title:"metrics.structured",badge:"Kafka Topic",bc:"b-green",
+    desc:"Buffer for validated structured metric events. Keyed by serviceId so all events from one service land on the same partition, preserving order and maximising enrichment cache hits in metrics-processor.",
+    props:[["Producer","metrics-collector"],["Consumer","metrics-processor"],["Key","serviceId"],["Value","JSON — MetricEvent"],["Partitions","3"]]},
+  klogs:{title:"logs.raw",badge:"Kafka Topic",bc:"b-green",
+    desc:"Buffer for raw unstructured log strings. No key required — order doesn't matter for batch Parquet conversion. 7-day retention means no data loss even if Flink restarts.",
+    props:[["Producer","metrics-collector"],["Consumer","Flink Pipeline 2"],["Key","none (optional source)"],["Value","plain UTF-8 string"],["Retention","168 hours"]]},
+  knorm:{title:"metrics.normalized",badge:"Kafka Topic",bc:"b-green",
+    desc:"Enriched metric events produced by metrics-processor. Each record carries the original metric fields plus service metadata resolved from PostgreSQL (serviceName, team, environment, region). This is what Flink aggregates.",
+    props:[["Producer","metrics-processor"],["Consumer","Flink Pipeline 1"],["Key","serviceId"],["Value","JSON — NormalizedMetric"],["Extra fields","serviceName, team, environment, region"]]},
+  kcdc:{title:"cdc.public.service_metadata",badge:"Kafka CDC Topic",bc:"b-green",
+    desc:"Debezium change events from the service_metadata table. Flink reads this as a broadcast stream — every parallel task slot receives every CDC event and updates in-memory enrichment state. Eliminates DB lookups in the aggregation hot path.",
+    props:[["Source","Debezium → PostgreSQL WAL"],["Consumer","Flink broadcast state"],["Operations","c=insert, u=update, d=delete, r=snapshot"],["Value","JSON — CdcEvent"]]},
+  processor:{title:"metrics-processor",badge:"Spring Boot :8082",bc:"b-blue",
+    desc:"Two Kafka consumers: StructuredMetricsConsumer enriches events from metrics.structured using a Caffeine cache over PostgreSQL, then publishes NormalizedMetric to metrics.normalized. RawLogConsumer provides a fast structured-metrics path from log lines via regex.",
+    props:[["Port","8082"],["Consumers","metrics.structured, logs.raw"],["Produces","metrics.normalized"],["Cache","Caffeine 500 entries / 10 min TTL"],["DB","PostgreSQL :5432"]],
+    code:`// EnrichmentService — DB lookup is @Cacheable\nServiceMetadata meta = repo.findById(event.getServiceId())\n    .orElse(defaults);\nreturn NormalizedMetric.from(event, meta);`},
+  flink:{title:"Flink Job — metrics-flink-processor",badge:"Apache Flink 1.18",bc:"b-orange",
+    desc:"Fat JAR (no Spring) submitted via flink run. Runs two completely independent streaming pipelines in one job. Checkpoints every 60s for exactly-once guarantees.",
+    props:[["P1 source","metrics.normalized (Kafka)"],["P1 window","1-min tumbling, event time"],["P1 watermark","5s bounded out-of-orderness"],["P1 sinks","TimescaleDB + MinIO Parquet"],["P2 source","logs.raw (Kafka)"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["Checkpointing","60s"]],
+    code:`// Pipeline 2 rolling text sink\nFileSink.<String>forRowFormat(\n    new Path(hdfsLogsOutputPath),\n    new SimpleStringEncoder<>("UTF-8"))\n  .withRollingPolicy(\n    DefaultRollingPolicy.builder()\n      .withRolloverInterval(Duration.ofMinutes(5))\n      .withMaxPartSize(MemorySize.ofMebiBytes(128))\n      .build())\n  .withBucketAssigner(\n    new DateTimeBucketAssigner<>("'year='yyyy/'month='MM/..."))\n  .build();`},
+  postgres:{title:"PostgreSQL",badge:"Database :5432",bc:"b-purple",
+    desc:"Dual role: enrichment reference store (service_metadata table) and CDC source. WAL logical replication enabled so Debezium tails row-level changes in real time. Managed by Flyway migrations in metrics-processor.",
+    props:[["Port","5432"],["Key table","service_metadata"],["WAL level","logical (CDC prerequisite)"],["max_replication_slots","5"],["Migrations","Flyway V1__init.sql"]]},
+  timescale:{title:"TimescaleDB",badge:"Time-Series DB :5433",bc:"b-purple",
+    desc:"PostgreSQL extension for time-series. metric_aggregates is a hypertable partitioned on window_start — TimescaleDB automatically chunks data by time, making range queries O(matching chunks) rather than full table scans. DDL must be run manually before the Flink job.",
+    props:[["Port","5433"],["Hypertable","metric_aggregates"],["Partition col","window_start (TIMESTAMPTZ)"],["Written by","Flink TimescaleDbSink (JDBC)"],["Read by","API Gateway JdbcTemplate"]],
+    code:`CREATE TABLE metric_aggregates (\n  metric_name TEXT, service_id TEXT,\n  sum_value DOUBLE PRECISION,\n  min_value DOUBLE PRECISION,\n  max_value DOUBLE PRECISION,\n  count_value BIGINT,\n  avg_value DOUBLE PRECISION,\n  window_start TIMESTAMPTZ NOT NULL,\n  window_end   TIMESTAMPTZ NOT NULL,\n  PRIMARY KEY (metric_name, service_id, window_start)\n);\nSELECT create_hypertable('metric_aggregates','window_start');`},
+  hdfsraw:{title:"HDFS — Raw Log Files",badge:"HDFS Storage",bc:"b-yellow",
+    desc:"Hadoop HDFS stores rolling .txt log files from Flink Pipeline 2. Files partition by year/month/day/hour so the Spark job can process bounded hourly batches. Each file contains one raw log line per line.",
+    props:[["NameNode UI","localhost:9870"],["Path","hdfs://namenode:9000/metrics/logs/raw/"],["Layout","year=Y/month=M/day=D/hour=H/logs-*.txt"],["Roll trigger","5 min OR 128 MB"],["Written by","Flink FileSink"]]},
+  minio:{title:"MinIO (S3-compatible)",badge:"Object Storage",bc:"b-teal",
+    desc:"S3-compatible object store for aggregated structured metrics Parquet output from Flink Pipeline 1. API Gateway lists available files; actual Parquet querying would use Apache Arrow, DuckDB, or Spark SQL.",
+    props:[["API port","9000"],["Console","localhost:9001"],["Bucket","metrics-parquet"],["Path","environment/YYYY-MM-DD/part-*.parquet"],["Credentials","minioadmin/minioadmin (dev only)"]]},
+  gateway:{title:"API Gateway — metrics-api-gateway",badge:"Spring Boot :8083",bc:"b-blue",
+    desc:"REST query layer. Uses raw JdbcTemplate (not JPA) for TimescaleDB queries — hypertable range queries are best expressed as parameterized SQL. Validates that from < to before querying. Lists Parquet files from MinIO.",
+    props:[["Port","8083"],["GET /query/timeseries","aggregated metric range"],["GET /query/series","time-series data points"],["GET /query/files","MinIO Parquet listing"],["DB","TimescaleDB :5433"]],
+    code:`GET /api/v1/query/timeseries\n  ?metricName=http.request.duration\n  &serviceId=svc-api\n  &from=2024-01-15T00:00:00Z\n  &to=2024-01-15T01:00:00Z`},
+  spark:{title:"Spark Job — metrics-spark-processor",badge:"Apache Spark 3.5",bc:"b-red",
+    desc:"Batch job submitted via spark-submit. Reads all .txt files under the HDFS raw path recursively, applies regex parsing to extract structured fields, filters unmatched lines, and writes Parquet partitioned by level/date.",
+    props:[["Input","hdfs://namenode:9000/metrics/logs/raw/**/*.txt"],["Output","hdfs://namenode:9000/metrics/logs/parquet/"],["Partition by","level, date"],["Write mode","Append"],["Submit","spark-submit --master spark://localhost:7077"]],
+    code:`// Regex extracts: timestamp, level, service_id, message\n"(\\d{4}-\\d{2}-\\d{2}T[\\d:.]+Z)\\s+\\[(\\w+)]\\s+\\[([^\\]]+)]\\s+(.*)"\n\nparsed.write()\n  .mode(SaveMode.Append)\n  .partitionBy("level","date")\n  .parquet(outputPath);`},
+  hdfspar:{title:"HDFS — Structured Parquet",badge:"HDFS Storage",bc:"b-yellow",
+    desc:"Analytical output of the Spark job. Every log line that matched the regex is stored as a structured Parquet record. Partition pruning on level and date makes analytical queries fast.",
+    props:[["Path","hdfs://namenode:9000/metrics/logs/parquet/"],["Partitions","level=INFO/date=YYYY-MM-DD/"],["Columns","timestamp, level, service_id, message, raw_line, date"],["Query with","Spark SQL, Hive, Trino/Presto"]]}
+};
+
+// ─── JOURNEYS ─────────────────────────────────────────────────────────────────
+const JOURNEYS = [
+  {title:"📊 Structured Metric Journey",sub:"How a metric event travels from your app to TimescaleDB",steps:[
+    {icon:"🚀",t:"Client sends metric",d:"Your app calls <code>POST /api/v1/metrics</code> on <b>metrics-collector</b> with JSON containing metricName, value, unit, serviceId, tags, and timestamp."},
+    {icon:"✅",t:"Validation & Kafka publish",d:"metrics-collector validates with Bean Validation (<code>@NotBlank</code>, <code>@NotNull</code>), then publishes JSON to <b>metrics.structured</b> Kafka topic keyed by <code>serviceId</code> for partition affinity."},
+    {icon:"📨",t:"Kafka buffers the event",d:"The event lands in one of 3 partitions based on serviceId hash. Kafka holds it for up to 7 days — it's a durable backpressure buffer between ingestion and processing."},
+    {icon:"🔍",t:"Processor enriches it",d:"<b>StructuredMetricsConsumer</b> picks up the event, calls <b>EnrichmentService</b> which does a Caffeine-cached PostgreSQL lookup to resolve serviceName, team, environment, region from <code>service_metadata</code> table."},
+    {icon:"📤",t:"Normalized event published",d:"The <code>NormalizedMetric</code> (original fields + enrichment fields) is serialized to JSON and published to <b>metrics.normalized</b>, still keyed by serviceId."},
+    {icon:"⚡",t:"Flink Pipeline 1 reads & windows",d:"Flink reads from <b>metrics.normalized</b>, assigns event-time timestamps with a 5s watermark for late arrivals, keys by <code>serviceId:metricName</code>, and applies a <b>1-minute tumbling window</b>."},
+    {icon:"🔄",t:"CDC broadcast enrichment",d:"Simultaneously, <b>CdcEnrichmentBroadcastFunction</b> joins each metric against broadcast state (populated from <b>cdc.public.service_metadata</b>). If a service was renamed in PostgreSQL, Flink sees it within seconds."},
+    {icon:"📊",t:"Aggregation: sum/min/max/avg",d:"<b>MetricWindowAggregator</b> incrementally computes sum, min, max, count per window. On window close, <b>MetricWindowProcessFunction</b> stamps windowStartMs / windowEndMs."},
+    {icon:"💾",t:"Dual sink — TimescaleDB + MinIO",d:"The aggregated result is forked: <b>TimescaleDbSink</b> does a JDBC upsert into the <code>metric_aggregates</code> hypertable. The same record is written as <b>Parquet to MinIO</b> via FileSink, partitioned by environment/date."},
+    {icon:"🔎",t:"API Gateway serves the query",d:"A dashboard calls <code>GET /api/v1/query/timeseries?metricName=...&from=...&to=...</code>. API Gateway issues parameterized SQL against TimescaleDB's hypertable with partition pruning on <code>window_start</code>."},
+  ]},
+  {title:"📝 Raw Log Journey",sub:"How an unstructured log line becomes a queryable Parquet record in HDFS",steps:[
+    {icon:"📋",t:"Log line arrives",d:"An app POSTs a raw UTF-8 log line to <code>POST /api/v1/logs</code> with <code>Content-Type: text/plain</code>. Batches are also accepted as a JSON array of strings."},
+    {icon:"📤",t:"Published verbatim to Kafka",d:"<b>metrics-collector</b> publishes the raw string directly to <b>logs.raw</b> — no parsing at ingest. Parsing is expensive; keeping the collector fast is intentional."},
+    {icon:"📨",t:"Kafka holds it durably",d:"<b>logs.raw</b> retains messages for 7 days. Even if Flink goes down, no log lines are lost — Flink resumes from its last checkpoint offset."},
+    {icon:"⚡",t:"Flink Pipeline 2 writes to HDFS",d:"Flink reads raw strings from <b>logs.raw</b> and writes each line to HDFS using <code>FileSink&lt;String&gt;</code> with <code>SimpleStringEncoder</code>. Files are partitioned by <code>year/month/day/hour</code> via <code>DateTimeBucketAssigner</code>."},
+    {icon:"🗂️",t:"HDFS accumulates hourly files",d:"Files appear at <code>/metrics/logs/raw/year=2024/month=01/day=15/hour=10/logs-*.txt</code>. Each file rolls after 5 minutes or 128 MB. Flink's checkpoint guarantees exactly-once file commits."},
+    {icon:"🔥",t:"Spark job reads HDFS",d:"You submit the Spark job: <code>spark-submit --class SparkLogProcessor ...</code>. It calls <code>spark.read().option(\"recursiveFileLookup\",true).text(inputPath)</code> loading all .txt files as a DataFrame."},
+    {icon:"🔬",t:"Regex parsing & filtering",d:"Spark applies <code>regexp_extract</code> to each row using the pattern <code>(timestamp) [(level)] [(service_id)] (message)</code>. Lines without a matching timestamp are dropped by <code>.filter(col(\"timestamp\").notEqual(\"\"))</code>."},
+    {icon:"📅",t:"Date partition column derived",d:"<code>to_date(col(\"timestamp\"))</code> adds a <code>date</code> column. The DataFrame now has: timestamp, level, service_id, message, raw_line, date."},
+    {icon:"💎",t:"Written as partitioned Parquet",d:"Spark writes to HDFS as Parquet with <code>.partitionBy(\"level\",\"date\")</code>. Result: <code>/metrics/logs/parquet/level=ERROR/date=2024-01-15/part-*.parquet</code> — queryable with Hive, Trino, or Spark SQL using partition pruning."},
+  ]},
+  {title:"🔄 CDC Enrichment Journey",sub:"How PostgreSQL changes flow into Flink's live broadcast state",steps:[
+    {icon:"🗄️",t:"PostgreSQL WAL enabled",d:"PostgreSQL runs with <code>wal_level=logical</code>, <code>max_replication_slots=5</code>. Logical replication exposes row-level change events as a stream — prerequisite for Debezium."},
+    {icon:"👁️",t:"Debezium watches service_metadata",d:"Debezium's PostgreSQL connector (in Kafka Connect) performs an initial snapshot of all <code>service_metadata</code> rows (operation <code>r</code>), then tails the WAL for ongoing changes."},
+    {icon:"📡",t:"Change events → Kafka CDC topic",d:"Every INSERT, UPDATE, or DELETE on <code>service_metadata</code> produces a JSON event on <b>cdc.public.service_metadata</b> containing: operation (c/u/d/r), serviceId, and new row values."},
+    {icon:"📻",t:"Flink broadcasts CDC events",d:"The CDC Kafka source is converted to a <b>BroadcastStream</b> using a <code>MapStateDescriptor&lt;String,CdcEvent&gt;</code>. Broadcast means every parallel Flink task slot receives every CDC event — no partitioning."},
+    {icon:"🧠",t:"Broadcast state updated",d:"<b>CdcEnrichmentBroadcastFunction.processBroadcastElement()</b> updates the in-memory map: upsert for <code>c/u/r</code> operations, remove for <code>d</code> (delete). All task slots stay in sync."},
+    {icon:"🔗",t:"Metrics enriched in-stream",d:"When a <code>NormalizedMetric</code> arrives, <code>processElement()</code> looks up the serviceId in broadcast state and overwrites serviceName/team/environment/region if a newer entry exists — zero DB calls in the aggregation hot path."},
+    {icon:"✅",t:"Why this matters",d:"Without CDC: a service renamed in PostgreSQL would produce stale metrics until the Caffeine cache expires (10 min). With CDC: Flink's broadcast state reflects the change within seconds of the DB write."},
+  ]},
+  {title:"🔍 API Query Journey",sub:"How a client fetches aggregated time-series metrics",steps:[
+    {icon:"📡",t:"Client issues GET request",d:"A dashboard calls: <code>GET /api/v1/query/timeseries?metricName=http.request.duration&serviceId=svc-api&from=2024-01-15T00:00:00Z&to=2024-01-15T01:00:00Z</code>"},
+    {icon:"✅",t:"Input validation",d:"API Gateway validates <code>from.isBefore(to)</code>. If not, returns <code>400 Bad Request</code>. <code>@DateTimeFormat(iso=ISO.DATE_TIME)</code> handles ISO-8601 parsing."},
+    {icon:"🗄️",t:"SQL query on TimescaleDB",d:"<code>AggregatedMetricRepository</code> issues parameterized SQL: <code>WHERE metric_name=? AND service_id=? AND window_start BETWEEN ? AND ?</code>. TimescaleDB's hypertable pruning makes this fast."},
+    {icon:"📊",t:"JSON array returned",d:"Each row maps to a <code>MetricQueryResult</code> (metricName, serviceId, avg, min, max, count, windowStart, windowEnd) serialized to JSON — one object per 1-minute window."},
+    {icon:"📁",t:"Long-term: Parquet file listing",d:"For historical data, <code>GET /api/v1/query/files?prefix=production/2024-01-15</code> returns MinIO Parquet object names. Clients can query the Parquet files directly with DuckDB, Apache Arrow, or Spark SQL."},
+  ]}
+];
+
+// ─── COMPONENT CARDS ─────────────────────────────────────────────────────────
+const COMPS = [
+  {title:"metrics-collector",badge:"Spring Boot",bc:"b-blue",port:"8081",
+   desc:"Ingestion gateway for structured metrics and raw logs. High-throughput Kafka producer.",
+   rows:[["POST /api/v1/metrics","single structured event"],["POST /api/v1/metrics/batch","batch of events"],["POST /api/v1/logs","raw text line(s)"],["Kafka acks","all (strongest durability)"],["Linger / batch","5ms / 64KB"]]},
+  {title:"metrics-processor",badge:"Spring Boot",bc:"b-blue",port:"8082",
+   desc:"Dual Kafka consumer — enriches events from PostgreSQL (cached) and forwards to metrics.normalized.",
+   rows:[["StructuredMetricsConsumer","metrics.structured → enrich → normalize"],["RawLogConsumer","logs.raw → regex parse → normalize"],["Cache","Caffeine, 500 entries, 10 min TTL"],["Flyway","V1__init.sql seeds service_metadata"]]},
+  {title:"metrics-flink-processor",badge:"Flink 1.18",bc:"b-orange",port:"flink run",
+   desc:"Fat JAR with two pipelines: windowed aggregation (P1) and raw log HDFS archival (P2).",
+   rows:[["P1 window","1-min tumbling, event time"],["P1 sinks","TimescaleDB upsert + MinIO Parquet"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["CDC","broadcast state enrichment"],["Checkpoint","60s (exactly-once)"]]},
+  {title:"metrics-spark-processor",badge:"Spark 3.5",bc:"b-red",port:"spark-submit",
+   desc:"Batch job: reads HDFS raw .txt log files, applies regex, writes structured Parquet.",
+   rows:[["Input","HDFS /metrics/logs/raw/**/*.txt"],["Regex groups","timestamp, level, service_id, message"],["Filter","drop lines without timestamp match"],["Output","HDFS /metrics/logs/parquet/ (level/date)"],["Mode","Append"]]},
+  {title:"metrics-api-gateway",badge:"Spring Boot",bc:"b-blue",port:"8083",
+   desc:"REST query layer over TimescaleDB and MinIO. Raw JdbcTemplate for hypertable queries.",
+   rows:[["GET /query/timeseries","aggregated metric range query"],["GET /query/series","time-series data points"],["GET /query/files","MinIO Parquet file listing"],["Validation","from.isBefore(to) or 400"]]},
+  {title:"PostgreSQL",badge:"Database",bc:"b-purple",port:"5432",
+   desc:"Enrichment reference store and Debezium CDC source. WAL logical replication enabled.",
+   rows:[["Key table","service_metadata (serviceId → metadata)"],["WAL level","logical (CDC prerequisite)"],["Managed by","Flyway in metrics-processor"],["Seeds","svc-api, svc-worker, svc-unknown"]]},
+  {title:"TimescaleDB",badge:"Time-Series DB",bc:"b-purple",port:"5433",
+   desc:"PostgreSQL + time-series extension. metric_aggregates is a hypertable. DDL run manually.",
+   rows:[["Hypertable","metric_aggregates on window_start"],["Written by","Flink JDBC upsert"],["Read by","API Gateway JdbcTemplate"],["DDL","run manually before Flink job start"]]},
+  {title:"Apache Kafka",badge:"Message Bus",bc:"b-green",port:"9092",
+   desc:"Central data bus. 4 topics. AUTO_CREATE_TOPICS disabled — create topics explicitly.",
+   rows:[["metrics.structured","collector → processor"],["logs.raw","collector → Flink P2"],["metrics.normalized","processor → Flink P1"],["cdc.public.service_metadata","Debezium → Flink broadcast"]]},
+  {title:"MinIO",badge:"Object Storage",bc:"b-teal",port:"9000/9001",
+   desc:"S3-compatible store for structured metrics Parquet from Flink P1. Console at :9001.",
+   rows:[["Bucket","metrics-parquet"],["Path","environment/YYYY-MM-DD/part-*.parquet"],["Console","localhost:9001"],["Credentials","minioadmin/minioadmin (dev only)"]]},
+  {title:"Hadoop HDFS",badge:"Distributed FS",bc:"b-yellow",port:"9870",
+   desc:"Stores rolling .txt raw log files (from Flink) and structured Parquet files (from Spark).",
+   rows:[["NameNode UI","localhost:9870"],["Raw logs","/metrics/logs/raw/year=.../..."],["Parquet","/metrics/logs/parquet/level=.../date=..."],["Init","hadoop-init container creates dirs on startup"]]},
+  {title:"Debezium CDC",badge:"Kafka Connect",bc:"b-green",port:"8083",
+   desc:"Watches PostgreSQL WAL and publishes row-level changes to Kafka CDC topics.",
+   rows:[["Watches","service_metadata table"],["Topic","cdc.public.service_metadata"],["Operations","c=insert, u=update, d=delete, r=snapshot"],["Consumer","Flink broadcast state"]]},
+];
+
+// ─── KAFKA TOPICS ─────────────────────────────────────────────────────────────
+const KTOPICS = [
+  {name:"metrics.structured",prod:"metrics-collector",cons:"metrics-processor",key:"serviceId",val:"JSON — MetricEvent",
+   why:"Keyed by serviceId so all events from one service land on the same partition, preserving order and maximising enrichment cache hit rate in the processor.",
+   fields:["metricName: String","value: double","unit: String","serviceId: String","tags: Map<String,String>","timestamp: Instant"]},
+  {name:"logs.raw",prod:"metrics-collector",cons:"Flink Pipeline 2",key:"none (optional source)",val:"plain UTF-8 string",
+   why:"No parsing at ingest — keeps the collector at maximum throughput. No key needed because Spark batch processing doesn't require per-service ordering.",
+   fields:["(raw log line as string)","e.g. '2024-01-15T10:30:00Z [INFO] [svc-api] msg'"]},
+  {name:"metrics.normalized",prod:"metrics-processor",cons:"Flink Pipeline 1",key:"serviceId",val:"JSON — NormalizedMetric",
+   why:"Enriched version of MetricEvent. Adding metadata here (not in Flink) keeps the streaming aggregation logic stateless for the enrichment step — only windowing needs state.",
+   fields:["...all MetricEvent fields","serviceName: String","team: String","environment: String","region: String","timestampMs: long"]},
+  {name:"cdc.public.service_metadata",prod:"Debezium (Kafka Connect)",cons:"Flink broadcast state",key:"serviceId",val:"JSON — CdcEvent",
+   why:"Enables Flink to maintain a live copy of the enrichment table in broadcast state across all task slots — zero DB calls in the hot aggregation path.",
+   fields:["operation: String (c/u/d/r)","serviceId: String","serviceName: String","team: String","environment: String","region: String"]},
+];
+
+// ─── ANIMATION ────────────────────────────────────────────────────────────────
+const PATHS_ANIM = [
+  {id:'p0',col:'#3b82f6'},{id:'p1',col:'#3b82f6'},{id:'p2',col:'#34d399'},
+  {id:'p3',col:'#34d399'},{id:'p4',col:'#34d399'},{id:'p6',col:'#34d399'},
+  {id:'p8',col:'#fbbf24'},{id:'p9',col:'#fbbf24'},{id:'p11',col:'#a78bfa'},
+  {id:'p12',col:'#14b8a6'},{id:'p13',col:'#eab308'},{id:'p14',col:'#ef4444'},
+  {id:'p15',col:'#eab308'},{id:'p16',col:'#3b82f6'},{id:'p7',col:'#34d399'},
+];
+let pkts=[];
+function spawnPkt(){
+  const e=PATHS_ANIM[Math.floor(Math.random()*PATHS_ANIM.length)];
+  const p=document.getElementById(e.id);
+  if(!p)return;
+  pkts.push({p,len:p.getTotalLength(),t:0,spd:0.004+Math.random()*0.004,col:e.col});
+}
+function animate(){
+  const g=document.getElementById('pkts');
+  if(!g){requestAnimationFrame(animate);return;}
+  if(Math.random()<0.07)spawnPkt();
+  g.innerHTML='';
+  pkts=pkts.filter(k=>k.t<=1);
+  pkts.forEach(k=>{
+    k.t+=k.spd;
+    if(k.t>1)return;
+    const pt=k.p.getPointAtLength(k.t*k.len);
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y);c.setAttribute('r','4');
+    c.setAttribute('fill',k.col);c.setAttribute('opacity',String(0.9-k.t*0.6));
+    g.appendChild(c);
+  });
+  requestAnimationFrame(animate);
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function showTab(name,btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name+'-pane').classList.add('active');
+  btn.classList.add('active');
+  if(name==='components')buildComps();
+  if(name==='kafka')buildKafka();
+}
+
+// ─── SIDE PANEL ───────────────────────────────────────────────────────────────
+function pick(id){
+  document.querySelectorAll('.node').forEach(n=>n.classList.remove('sel'));
+  const nd=document.getElementById('n-'+id);
+  if(nd)nd.classList.add('sel');
+  const info=INFO[id];
+  if(!info)return;
+  const sp=document.getElementById('side-panel');
+  sp.innerHTML=`
+    <span class="badge ${info.bc}" style="margin-bottom:10px;display:inline-block">${info.badge}</span>
+    <h2 style="font-size:16px;margin-bottom:10px">${info.title}</h2>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">${info.desc}</p>
+    ${info.props?`<table style="width:100%;border-collapse:collapse;margin-bottom:12px">${info.props.map(([k,v])=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 3px;font-size:11px;color:var(--muted)">${k}</td><td style="padding:5px 3px;font-size:11px;font-family:monospace;color:#7dd3fc;text-align:right">${v}</td></tr>`).join('')}</table>`:''}
+    ${info.code?`<pre>${info.code}</pre>`:''}
+  `;
+}
+
+// ─── JOURNEYS ─────────────────────────────────────────────────────────────────
+function pickJourney(i,btn){
+  document.querySelectorAll('.jbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderJourney(i);
+}
+function renderJourney(i){
+  const j=JOURNEYS[i];
+  document.getElementById('journey-body').innerHTML=`
+    <div style="margin-bottom:22px">
+      <h2 style="font-size:22px;margin-bottom:6px">${j.title}</h2>
+      <p style="color:var(--muted);font-size:13px">${j.sub}</p>
+    </div>
+    <ol class="step-list">${j.steps.map(s=>`<li><div><div class="step-title">${s.icon} ${s.t}</div><div style="color:var(--muted)">${s.d}</div></div></li>`).join('')}</ol>
+  `;
+}
+
+// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+function buildComps(){
+  const g=document.getElementById('comp-grid');
+  if(g.childElementCount)return;
+  g.innerHTML=COMPS.map(c=>`
+    <div class="comp-card">
+      <h3>${c.title}<span class="badge ${c.bc}">${c.badge}</span>${c.port?`<span class="badge b-gray">:${c.port}</span>`:''}</h3>
+      <p>${c.desc}</p>
+      <div>${c.rows.map(([k,v])=>`<div class="prop-row"><span class="prop-key">${k}</span><span class="prop-val">${v}</span></div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ─── KAFKA TOPICS ─────────────────────────────────────────────────────────────
+function buildKafka(){
+  const g=document.getElementById('kafka-grid');
+  if(g.childElementCount)return;
+  g.innerHTML=KTOPICS.map(t=>`
+    <div class="kafka-card">
+      <h3>${t.name}</h3>
+      <div class="flow-line"><span class="prod">▶ ${t.prod}</span><span class="arr">→</span><span class="cons">${t.cons} ▶</span></div>
+      <p>${t.why}</p>
+      <div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px">
+        <div><span style="color:var(--muted)">Key: </span><code>${t.key}</code></div>
+        <div><span style="color:var(--muted)">Value: </span><code>${t.val}</code></div>
+      </div>
+      <div class="fields"><div class="label">Message Fields</div>${t.fields.map(f=>`<div class="field">${f}</div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+renderJourney(0);
+animate();
+</script>
+</body>
+</html>
