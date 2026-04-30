@@ -30,11 +30,11 @@ footer{margin-top:28px;font-size:12px;color:var(--muted)}
   <span class="badge">⚡ Production-Ready System</span>
   <h1>Distributed Metrics &amp;<br>Log Aggregation System</h1>
   <p class="sub">
-    Real-time ingestion, stream processing, and analytical storage for
-    structured metrics, unstructured logs, and Protobuf user events —
-    built with Kafka, Flink, Spark, Hadoop, TimescaleDB, and Spring Boot.
-    Protobuf payloads flow from the API Gateway through Confluent Schema Registry
-    to Flink, which caches schemas per task slot for zero-overhead deserialization.
+    Real-time ingestion, stream processing, and analytical storage for structured
+    metrics, unstructured logs, Protobuf user events, and arbitrary external API
+    JSON — built with Kafka, Flink, Spark, Hadoop, TimescaleDB, and Spring Boot.
+    Unknown-schema API data flows through Kafka and Flink to HDFS, then a Spark
+    job infers the schema at read time and writes Parquet, S3, or a data warehouse.
   </p>
 
   <a class="cta" href="learning-guide.html">
@@ -43,14 +43,15 @@ footer{margin-top:28px;font-size:12px;color:var(--muted)}
 
   <div class="grid">
     <div class="chip"><strong style="color:#60a5fa">Spring Boot</strong>3 services<br>REST + Kafka</div>
-    <div class="chip"><strong style="color:#34d399">Apache Kafka</strong>5 topics<br>high-volume buffer</div>
-    <div class="chip"><strong style="color:#fbbf24">Apache Flink</strong>3 pipelines<br>event-time windows</div>
+    <div class="chip"><strong style="color:#34d399">Apache Kafka</strong>6 topics<br>high-volume buffer</div>
+    <div class="chip"><strong style="color:#fbbf24">Apache Flink</strong>4 pipelines<br>event-time windows</div>
     <div class="chip"><strong style="color:#f87171">Apache Spark</strong>batch job<br>log → Parquet</div>
     <div class="chip"><strong style="color:#a78bfa">TimescaleDB</strong>time-series<br>hypertable</div>
     <div class="chip"><strong style="color:#facc15">Hadoop HDFS</strong>raw logs<br>+ Parquet</div>
     <div class="chip"><strong style="color:#2dd4bf">MinIO</strong>S3-compat<br>Parquet sink</div>
     <div class="chip"><strong style="color:#34d399">Debezium</strong>CDC<br>enrichment</div>
     <div class="chip"><strong style="color:#c084fc">Schema Registry</strong>Protobuf<br>schema cache</div>
+    <div class="chip"><strong style="color:#f87171">Schema-on-read</strong>external JSON<br>Spark inference</div>
   </div>
 
   <hr class="divider">

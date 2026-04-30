@@ -14,6 +14,10 @@ Distributed metrics logging and aggregation system using Apache Kafka, Apache Fl
 # Start all infrastructure (Kafka, Flink, Hadoop, Spark, Debezium, MinIO, TimescaleDB, etc.)
 docker-compose up -d
 
+# Ingest unstructured external API data (no schema required):
+# POST /api/v1/external/ingest          — single JSON record (X-Source-API header)
+# POST /api/v1/external/ingest/batch    — JSON array of records
+
 # Build all modules
 mvn clean package
 
@@ -34,7 +38,7 @@ mvn test -pl metrics-collector
 # Run a single test class
 mvn test -pl metrics-collector -Dtest=MetricsCollectorServiceTest
 
-# Submit Flink job (runs all three pipelines: structured metrics, raw log archival, Protobuf user events)
+# Submit Flink job (runs all four pipelines: structured metrics, raw log archival, Protobuf user events, unstructured external data)
 cd metrics-flink-processor
 mvn clean package
 flink run -c com.metrics.flink.FlinkMetricsJob target/flink-processor-1.0.0.jar
@@ -48,6 +52,18 @@ spark-submit \
   target/metrics-spark-processor-1.0.0-SNAPSHOT.jar \
   hdfs://namenode:9000/metrics/logs/raw \
   hdfs://namenode:9000/metrics/logs/parquet
+
+# Submit ExternalDataProcessor Spark job (schema-on-read: infers schema from NDJSON files)
+# Writes Parquet to HDFS; optionally also writes to S3/MinIO and/or a JDBC data warehouse.
+cd metrics-spark-processor
+spark-submit \
+  --master spark://localhost:7077 \
+  --class com.metrics.spark.ExternalDataProcessor \
+  target/metrics-spark-processor-1.0.0-SNAPSHOT.jar \
+  hdfs://namenode:9000/metrics/external/raw \
+  hdfs://namenode:9000/metrics/external/parquet \
+  [--output-s3 s3a://metrics-bucket/external/parquet] \
+  [--output-jdbc jdbc:postgresql://localhost:5433/metricsdb --jdbc-user metrics --jdbc-password metrics --jdbc-table external_events --jdbc-mode append]
 ```
 
 ## TimescaleDB DDL (run once before submitting the Flink job)
@@ -102,6 +118,22 @@ User Events (Protobuf)  -->  API Gateway  -->  Schema Registry (auto-register)
                                  |
                           Flink Pipeline 3  -->  ProtobufUserEventDeserializer
                                                   (CachedSchemaRegistryClient + operator Map cache)
+
+External API Data (unknown JSON)  -->  metrics-collector POST /api/v1/external/ingest
+                                              |
+                                      external.data.raw  (Kafka, raw JSON string, keyed by X-Source-API)
+                                              |
+                                      Flink Pipeline 4  -->  NDJSON rolling files on HDFS
+                                         (ExternalDataDeserializer: key=sourceApi, value=JSON)
+                                              |
+                                       hdfs://namenode:9000/metrics/external/raw/
+                                         source=<api>/year=.../month=.../day=.../hour=.../data-*.json
+                                              |
+                                      ExternalDataProcessor (Spark)  -- schema inference, flatten, normalise
+                                              |
+                                     HDFS Parquet  -->  hdfs://namenode:9000/metrics/external/parquet/
+                                     S3/MinIO      -->  s3a://<bucket>/external/parquet/   (optional --output-s3)
+                                     JDBC DW       -->  PostgreSQL/TimescaleDB table        (optional --output-jdbc)
 ```
 
 ### Modules
@@ -109,15 +141,15 @@ User Events (Protobuf)  -->  API Gateway  -->  Schema Registry (auto-register)
 | Module | Role |
 |--------|------|
 | `metrics-proto` | Shared Protobuf schema module — compiles `user_event.proto` to Java via `protobuf-maven-plugin`; both gateway and Flink depend on this |
-| `metrics-collector` | Spring Boot ingestion service — `POST /api/v1/metrics` for structured events, `POST /api/v1/logs` for raw text; publishes to Kafka |
+| `metrics-collector` | Spring Boot ingestion service — `POST /api/v1/metrics` for structured events, `POST /api/v1/logs` for raw text, `POST /api/v1/external/ingest` for unknown-schema JSON; publishes to Kafka |
 | `metrics-processor` | Spring Boot Kafka consumer — enriches structured events from PostgreSQL and forwards to `metrics.normalized` |
-| `metrics-flink-processor` | Apache Flink job — three pipelines (see below); deployed via `flink run`, not a Spring Boot app |
-| `metrics-spark-processor` | Spark batch job — reads HDFS text files, parses with regex, writes Parquet; submitted via `spark-submit` |
+| `metrics-flink-processor` | Apache Flink job — four pipelines (see below); deployed via `flink run`, not a Spring Boot app |
+| `metrics-spark-processor` | Two Spark batch jobs: `SparkLogProcessor` (regex log parsing) and `ExternalDataProcessor` (schema-on-read JSON → Parquet/S3/JDBC); submitted via `spark-submit` |
 | `metrics-api-gateway` | Spring Boot query layer + Protobuf producer — time-series queries on TimescaleDB, Parquet file listing from MinIO, `POST /api/v1/users/events` publishes Protobuf to `users.events` |
 
 The Flink and Spark modules are fat JARs submitted to their respective clusters. All infrastructure is managed via `docker-compose`.
 
-### Flink Job — Three Pipelines
+### Flink Job — Four Pipelines
 
 **Pipeline 1 (structured metrics):**
 `metrics.normalized` → CDC broadcast enrichment → 1-min tumbling event-time window → TimescaleDB upsert + MinIO Parquet
@@ -126,6 +158,11 @@ The Flink and Spark modules are fat JARs submitted to their respective clusters.
 `logs.raw` → `FileSink` with `DefaultRollingPolicy` (5-min roll / 128 MB) → HDFS path `hdfs://namenode:9000/metrics/logs/raw/year=.../month=.../day=.../hour=.../logs-*.txt`
 
 Files roll every 5 minutes or 128 MB so the Spark job processes bounded hourly batches.
+
+**Pipeline 4 (unstructured external API data — schema-on-read):**
+`external.data.raw` → `ExternalDataDeserializer` (captures Kafka key as sourceApi + raw JSON value) → HDFS NDJSON rolling files partitioned by `source=<api>/year/month/day/hour/data-*.json` → consumed by `ExternalDataProcessor` Spark job.
+
+Each HDFS line is: `{"_source_api":"payments-api","_received_at":<ms>,"_data":{...original JSON...}}`. Spark reads with `spark.read.json()` for automatic schema inference, flattens `_data.*` fields, normalises column names, adds `_ingested_at` / `_record_hash` / `_date`, then writes Parquet (HDFS always; S3/MinIO and JDBC optional via CLI flags).
 
 **Pipeline 3 (Protobuf user events via Schema Registry):**
 `users.events` → `ProtobufUserEventDeserializer` → log sink

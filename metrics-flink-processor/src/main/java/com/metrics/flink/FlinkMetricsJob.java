@@ -6,7 +6,9 @@ import com.metrics.flink.function.MetricWindowAggregator;
 import com.metrics.flink.function.MetricWindowProcessFunction;
 import com.metrics.flink.model.AggregatedMetric;
 import com.metrics.flink.model.CdcEvent;
+import com.metrics.flink.model.ExternalDataRecord;
 import com.metrics.flink.model.NormalizedMetric;
+import com.metrics.flink.serialization.ExternalDataDeserializer;
 import com.metrics.flink.serialization.ProtobufUserEventDeserializer;
 import com.metrics.flink.sink.TimescaleDbSink;
 import com.metrics.proto.UserEvent;
@@ -51,6 +53,11 @@ import java.util.Properties;
  *
  * <p><b>Pipeline 3 — User events (Protobuf via Schema Registry):</b>
  * users.events → {@link ProtobufUserEventDeserializer} (schema cached per task slot) → log sink
+ *
+ * <p><b>Pipeline 4 — Unstructured external API data (schema-on-read):</b>
+ * external.data.raw → {@link ExternalDataDeserializer} (key=sourceApi, value=raw JSON) →
+ * HDFS NDJSON files partitioned by source/year/month/day/hour →
+ * consumed by {@code ExternalDataProcessor} Spark job for schema inference + transformation
  */
 public class FlinkMetricsJob {
 
@@ -86,9 +93,11 @@ public class FlinkMetricsJob {
         String timescalePass        = props.getProperty("timescaledb.password", "metrics");
         String parquetOutputPath    = props.getProperty("parquet.output.path", "s3://metrics-parquet/aggregated");
         String hdfsLogsOutputPath   = props.getProperty("hdfs.logs.output.path", "hdfs://namenode:9000/metrics/logs/raw");
-        String schemaRegistryUrl    = props.getProperty("schema.registry.url", "http://localhost:8081");
-        String userEventsTopic      = props.getProperty("users.events.topic", "users.events");
-        int parallelism             = Integer.parseInt(props.getProperty("flink.parallelism", "2"));
+        String schemaRegistryUrl      = props.getProperty("schema.registry.url", "http://localhost:8081");
+        String userEventsTopic        = props.getProperty("users.events.topic", "users.events");
+        String externalDataTopic      = props.getProperty("external.data.topic", "external.data.raw");
+        String externalDataOutputPath = props.getProperty("hdfs.external.output.path", "hdfs://namenode:9000/metrics/external/raw");
+        int parallelism               = Integer.parseInt(props.getProperty("flink.parallelism", "2"));
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(parallelism);
@@ -276,6 +285,87 @@ public class FlinkMetricsJob {
                 .returns(String.class)
                 .addSink(new org.apache.flink.streaming.api.functions.sink.PrintSinkFunction<>())
                 .name("user-events-log-sink");
+
+        // -----------------------------------------------------------------------
+        // Pipeline 4: Unstructured external API data — schema-on-read
+        //
+        // External APIs send arbitrary JSON whose shape may change at any time.
+        // We make no schema assumptions here: the raw JSON string plus metadata
+        // (source API identifier, ingestion timestamp) are written as NDJSON to
+        // HDFS, partitioned by source and hour. The ExternalDataProcessor Spark
+        // job then reads those files with Spark's built-in schema inference
+        // (spark.read.json), flattens nested structures, normalises column names,
+        // and writes structured Parquet — with optional S3/MinIO and JDBC outputs.
+        //
+        // Wire format per line in HDFS:
+        //   {"_source_api":"payments-api","_received_at":1714435200000,"_data":{...}}
+        // -----------------------------------------------------------------------
+
+        KafkaSource<ExternalDataRecord> externalDataSource = KafkaSource.<ExternalDataRecord>builder()
+                .setBootstrapServers(kafkaBootstrapServers)
+                .setTopics(externalDataTopic)
+                .setGroupId(kafkaGroupId + "-external-data")
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .setDeserializer(new ExternalDataDeserializer())
+                .build();
+
+        DataStream<ExternalDataRecord> externalDataStream = env
+                .fromSource(externalDataSource, WatermarkStrategy.noWatermarks(), "external-data-source")
+                .name("external-data-stream");
+
+        // Encode each record as a metadata-wrapped JSON line for the HDFS file.
+        // Using manual string building to keep the encoder Serializable — no
+        // ObjectMapper instance captured in the lambda.
+        FileSink<ExternalDataRecord> externalDataHdfsSink = FileSink
+                .forRowFormat(
+                        new Path(externalDataOutputPath),
+                        (org.apache.flink.api.common.serialization.Encoder<ExternalDataRecord>) (record, out) -> {
+                            String safe = record.getSourceApi()
+                                    .replace("\\", "\\\\")
+                                    .replace("\"", "\\\"");
+                            String line = "{\"_source_api\":\"" + safe
+                                    + "\",\"_received_at\":" + record.getReceivedAt()
+                                    + ",\"_data\":" + record.getJsonPayload() + "}\n";
+                            out.write(line.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        })
+                .withRollingPolicy(
+                        DefaultRollingPolicy.builder()
+                                .withRolloverInterval(Duration.ofMinutes(5))
+                                .withInactivityInterval(Duration.ofMinutes(1))
+                                .withMaxPartSize(MemorySize.ofMebiBytes(128))
+                                .build())
+                .withBucketAssigner(
+                        new org.apache.flink.streaming.api.functions.sink.filesystem.BucketAssigner<ExternalDataRecord, String>() {
+                            @Override
+                            public String getBucketId(ExternalDataRecord element, Context context) {
+                                String source = (element.getSourceApi() != null && !element.getSourceApi().isBlank())
+                                        ? element.getSourceApi().replaceAll("[^a-zA-Z0-9_-]", "_")
+                                        : "unknown";
+                                java.time.LocalDateTime dt = java.time.Instant
+                                        .ofEpochMilli(element.getReceivedAt())
+                                        .atZone(ZoneOffset.UTC)
+                                        .toLocalDateTime();
+                                return String.format("source=%s/year=%d/month=%02d/day=%02d/hour=%02d",
+                                        source, dt.getYear(), dt.getMonthValue(),
+                                        dt.getDayOfMonth(), dt.getHour());
+                            }
+
+                            @Override
+                            public org.apache.flink.core.io.SimpleVersionedSerializer<String> getSerializer() {
+                                return org.apache.flink.streaming.api.functions.sink.filesystem
+                                        .bucketassigners.SimpleVersionedStringSerializer.INSTANCE;
+                            }
+                        })
+                .withOutputFileConfig(
+                        OutputFileConfig.builder()
+                                .withPartPrefix("data")
+                                .withPartSuffix(".json")
+                                .build())
+                .build();
+
+        externalDataStream
+                .sinkTo(externalDataHdfsSink)
+                .name("external-data-hdfs-sink");
 
         env.execute("Metrics Aggregation Job");
     }

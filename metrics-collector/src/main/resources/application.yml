@@ -15,6 +15,10 @@ spring:
         linger.ms: 5
         batch.size: 65536
 
+kafka:
+  topics:
+    external-data: external.data.raw
+
 management:
   endpoints:
     web:

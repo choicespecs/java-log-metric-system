@@ -63,6 +63,14 @@
             </exclusions>
         </dependency>
 
+        <!-- PostgreSQL JDBC driver — bundled so the job can write to a data warehouse
+             without requiring --jars at spark-submit time -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+
         <!-- Test — override provided scope so Spark is available locally -->
         <dependency>
             <groupId>org.apache.spark</groupId>

@@ -110,7 +110,7 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <span style="margin-left:8px">Click any node →</span>
     </div>
 
-    <svg id="svg" viewBox="0 0 1200 610" style="width:100%;min-width:900px">
+    <svg id="svg" viewBox="0 0 1380 660" style="width:100%;min-width:1000px">
       <defs>
         <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
           <path d="M0,0 L7,2.5 L0,5 Z" fill="#4b5563"/>
@@ -306,11 +306,31 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
         <text x="821" y="562" text-anchor="middle" fill="#854d0e" font-size="10">structured log records</text>
       </g>
 
-      <!-- New edge labels for Pipeline 3 -->
+      <!-- Pipeline 4 paths: collector → external.data.raw → Flink → HDFS-ext → ExternalDataProcessor → outputs -->
+      <!-- collector → external.data.raw (JSON ingest, no schema) -->
+      <path id="p22" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M515,146 C820,70 1184,120 1184,224"/>
+      <!-- external.data.raw → flink (P4 consume) -->
+      <path id="p23" class="ep" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-y)" d="M1100,246 C960,246 760,328 658,348"/>
+      <!-- flink → hdfs-external (rolling NDJSON files) -->
+      <path id="p24" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M658,353 C800,353 1100,400 1100,424"/>
+      <!-- hdfs-external → ExternalDataProcessor -->
+      <path id="p25" class="ep" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-r)" d="M1184,472 L1184,524"/>
+      <!-- ExternalDataProcessor → HDFS Parquet -->
+      <path id="p26" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M1100,554 C1000,554 950,550 900,550"/>
+      <!-- ExternalDataProcessor → MinIO (S3 optional) -->
+      <path id="p27" class="ep" stroke="#14b8a6" stroke-width="1.4" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr-t)" d="M1100,540 C1020,500 890,460 812,448"/>
+
+      <!-- Edge labels for Pipeline 3 -->
       <text x="780" y="574" fill="#34d399" font-size="9" opacity=".6">Protobuf</text>
       <text x="900" y="258" fill="#fbbf24" font-size="9" opacity=".6">P3</text>
       <text x="700" y="595" fill="#a855f7" font-size="9" opacity=".5">register</text>
       <text x="714" y="378" fill="#a855f7" font-size="9" opacity=".5">schema cache</text>
+      <!-- Edge labels for Pipeline 4 -->
+      <text x="820" y="82" fill="#34d399" font-size="9" opacity=".6">JSON ingest</text>
+      <text x="1050" y="258" fill="#fbbf24" font-size="9" opacity=".6">P4</text>
+      <text x="845" y="366" fill="#a16207" font-size="9" opacity=".6">NDJSON files</text>
+      <text x="990" y="562" fill="#a16207" font-size="9" opacity=".6">Parquet</text>
+      <text x="955" y="484" fill="#0f766e" font-size="9" opacity=".5">S3 (opt.)</text>
 
       <!-- New nodes: users.events Kafka topic and Confluent Schema Registry -->
       <g id="n-kuserevents" class="node" onclick="pick('kuserevents')">
@@ -323,6 +343,26 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
         <rect x="858" y="424" width="170" height="48" rx="7" fill="#1a0a2e" stroke="#a855f7" stroke-width="1.5"/>
         <text x="943" y="444" text-anchor="middle" fill="#c084fc" font-size="12" font-weight="600">Schema Registry</text>
         <text x="943" y="460" text-anchor="middle" fill="#4c1d95" font-size="10">Confluent · :8081</text>
+      </g>
+
+      <!-- Pipeline 4 nodes -->
+      <g id="n-kexternal" class="node" onclick="pick('kexternal')">
+        <rect x="1100" y="224" width="168" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="1184" y="241" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">external.data.raw</text>
+        <text x="1184" y="256" text-anchor="middle" fill="#064e3b" font-size="10">Kafka · raw JSON</text>
+      </g>
+
+      <g id="n-hdfsexternal" class="node" onclick="pick('hdfsexternal')">
+        <rect x="1100" y="424" width="168" height="48" rx="7" fill="#1c1400" stroke="#eab308" stroke-width="1.5"/>
+        <text x="1184" y="444" text-anchor="middle" fill="#facc15" font-size="12" font-weight="600">HDFS</text>
+        <text x="1184" y="460" text-anchor="middle" fill="#854d0e" font-size="10">external NDJSON</text>
+      </g>
+
+      <g id="n-extprocessor" class="node" onclick="pick('extprocessor')">
+        <rect x="1100" y="524" width="168" height="60" rx="9" fill="#280000" stroke="#ef4444" stroke-width="2"/>
+        <text x="1184" y="546" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">ExternalData</text>
+        <text x="1184" y="561" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">Processor</text>
+        <text x="1184" y="575" text-anchor="middle" fill="#991b1b" font-size="9">Spark · schema-on-read</text>
       </g>
 
       <!-- Animated packets layer -->
