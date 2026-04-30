@@ -98,6 +98,27 @@
             <version>${hadoop.version}</version>
         </dependency>
 
+        <!-- Confluent Schema Registry client — CachedSchemaRegistryClient for Protobuf schema caching -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>${confluent.version}</version>
+            <exclusions>
+                <!-- Exclude kafka-clients to avoid version conflict with flink-connector-kafka -->
+                <exclusion>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka-clients</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Shared Protobuf-generated UserEvent class -->
+        <dependency>
+            <groupId>com.metrics</groupId>
+            <artifactId>metrics-proto</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Jackson -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -138,6 +159,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

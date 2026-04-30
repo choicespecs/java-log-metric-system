@@ -7,7 +7,9 @@ import com.metrics.flink.function.MetricWindowProcessFunction;
 import com.metrics.flink.model.AggregatedMetric;
 import com.metrics.flink.model.CdcEvent;
 import com.metrics.flink.model.NormalizedMetric;
+import com.metrics.flink.serialization.ProtobufUserEventDeserializer;
 import com.metrics.flink.sink.TimescaleDbSink;
+import com.metrics.proto.UserEvent;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -39,13 +41,16 @@ import java.time.ZoneOffset;
 import java.util.Properties;
 
 /**
- * Main Flink streaming job. Runs two independent pipelines:
+ * Main Flink streaming job. Runs three independent pipelines:
  *
  * <p><b>Pipeline 1 — Structured metrics aggregation:</b>
  * metrics.normalized → CDC enrichment → 1-min tumbling window → TimescaleDB + MinIO Parquet
  *
  * <p><b>Pipeline 2 — Unstructured log archival:</b>
  * logs.raw → rolling text files on HDFS (partitioned by hour) → consumed by Spark batch job
+ *
+ * <p><b>Pipeline 3 — User events (Protobuf via Schema Registry):</b>
+ * users.events → {@link ProtobufUserEventDeserializer} (schema cached per task slot) → log sink
  */
 public class FlinkMetricsJob {
 
@@ -81,6 +86,8 @@ public class FlinkMetricsJob {
         String timescalePass        = props.getProperty("timescaledb.password", "metrics");
         String parquetOutputPath    = props.getProperty("parquet.output.path", "s3://metrics-parquet/aggregated");
         String hdfsLogsOutputPath   = props.getProperty("hdfs.logs.output.path", "hdfs://namenode:9000/metrics/logs/raw");
+        String schemaRegistryUrl    = props.getProperty("schema.registry.url", "http://localhost:8081");
+        String userEventsTopic      = props.getProperty("users.events.topic", "users.events");
         int parallelism             = Integer.parseInt(props.getProperty("flink.parallelism", "2"));
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -236,6 +243,39 @@ public class FlinkMetricsJob {
         rawLogsStream
                 .sinkTo(hdfsTextSink)
                 .name("hdfs-raw-logs-sink");
+
+        // -----------------------------------------------------------------------
+        // Pipeline 3: User events (Protobuf via Schema Registry)
+        //
+        // The API Gateway publishes Protobuf-encoded UserEvent messages to the
+        // users.events topic using KafkaProtobufSerializer, which:
+        //   1. Auto-registers the schema in Confluent Schema Registry on first use.
+        //   2. Prepends a 5-byte Confluent header (magic byte 0x00 + schema ID).
+        //
+        // ProtobufUserEventDeserializer reads the schema ID from that header and
+        // caches the resolved ParsedSchema per task slot via CachedSchemaRegistryClient.
+        // After the first message for a given schema version, all subsequent lookups
+        // are served from operator memory — no extra registry calls per message.
+        // -----------------------------------------------------------------------
+
+        KafkaSource<UserEvent> userEventsKafkaSource = KafkaSource.<UserEvent>builder()
+                .setBootstrapServers(kafkaBootstrapServers)
+                .setTopics(userEventsTopic)
+                .setGroupId(kafkaGroupId + "-user-events")
+                .setStartingOffsets(OffsetsInitializer.earliest())
+                .setDeserializer(new ProtobufUserEventDeserializer(schemaRegistryUrl, 100))
+                .build();
+
+        DataStream<UserEvent> userEventsStream = env
+                .fromSource(userEventsKafkaSource, WatermarkStrategy.noWatermarks(), "user-events-protobuf-source")
+                .name("user-events-stream");
+
+        userEventsStream
+                .map(e -> String.format("[UserEvent] userId=%s type=%s service=%s env=%s ts=%d",
+                        e.getUserId(), e.getEventType(), e.getServiceId(), e.getEnvironment(), e.getTimestampMs()))
+                .returns(String.class)
+                .addSink(new org.apache.flink.streaming.api.functions.sink.PrintSinkFunction<>())
+                .name("user-events-log-sink");
 
         env.execute("Metrics Aggregation Job");
     }

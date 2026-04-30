@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package com.metrics.proto;
+
+option java_package = "com.metrics.proto";
+option java_outer_classname = "UserEventProto";
+option java_multiple_files = true;
+
+// Represents a user interaction event emitted by any service.
+// Binary Protobuf encoding eliminates field-name overhead vs JSON —
+// the Confluent Schema Registry wire format (5-byte header + payload)
+// carries the schema ID so consumers can deserialize without embedded keys.
+message UserEvent {
+  string user_id     = 1;
+  string event_type  = 2;  // e.g. LOGIN, LOGOUT, PURCHASE, PAGE_VIEW
+  int64  timestamp_ms = 3;
+  string service_id  = 4;
+  string session_id  = 5;
+  string environment = 6;
+  map<string, string> properties = 7;
+}

@@ -20,6 +20,7 @@
     <description>Distributed metrics logging and aggregation system</description>
 
     <modules>
+        <module>metrics-proto</module>
         <module>metrics-collector</module>
         <module>metrics-processor</module>
         <module>metrics-flink-processor</module>
@@ -34,14 +35,50 @@
         <parquet.version>1.13.1</parquet.version>
         <hadoop.version>3.3.6</hadoop.version>
         <spark.version>3.5.1</spark.version>
+        <protobuf.version>3.25.1</protobuf.version>
+        <confluent.version>7.5.0</confluent.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
-            <!-- Flink dependencies -->
+            <!-- Shared Protobuf schemas -->
+            <dependency>
+                <groupId>com.metrics</groupId>
+                <artifactId>metrics-proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Protobuf runtime -->
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+
+            <!-- Confluent Protobuf serializer (producer side) -->
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-protobuf-serializer</artifactId>
+                <version>${confluent.version}</version>
+            </dependency>
+
+            <!-- Confluent Schema Registry client (consumer/Flink side) -->
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-schema-registry-client</artifactId>
+                <version>${confluent.version}</version>
+            </dependency>
+            <!-- Flink dependencies (existing) -->
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-streaming-java</artifactId>

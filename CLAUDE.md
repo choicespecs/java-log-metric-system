@@ -34,7 +34,7 @@ mvn test -pl metrics-collector
 # Run a single test class
 mvn test -pl metrics-collector -Dtest=MetricsCollectorServiceTest
 
-# Submit Flink job (runs both pipelines: structured metrics + raw log archival)
+# Submit Flink job (runs all three pipelines: structured metrics, raw log archival, Protobuf user events)
 cd metrics-flink-processor
 mvn clean package
 flink run -c com.metrics.flink.FlinkMetricsJob target/flink-processor-1.0.0.jar
@@ -95,21 +95,29 @@ Unstructured Logs / Text  -->  logs.raw  -->  Flink Pipeline 2  -->  HDFS rollin
                                                                     HDFS Parquet
 
 CDC Events (Debezium)  -->  cdc.public.service_metadata  -->  Flink broadcast state (enrichment)
+
+User Events (Protobuf)  -->  API Gateway  -->  Schema Registry (auto-register)
+                                 |
+                          users.events (Kafka, Confluent wire format: 5-byte header + Protobuf)
+                                 |
+                          Flink Pipeline 3  -->  ProtobufUserEventDeserializer
+                                                  (CachedSchemaRegistryClient + operator Map cache)
 ```
 
 ### Modules
 
 | Module | Role |
 |--------|------|
+| `metrics-proto` | Shared Protobuf schema module — compiles `user_event.proto` to Java via `protobuf-maven-plugin`; both gateway and Flink depend on this |
 | `metrics-collector` | Spring Boot ingestion service — `POST /api/v1/metrics` for structured events, `POST /api/v1/logs` for raw text; publishes to Kafka |
 | `metrics-processor` | Spring Boot Kafka consumer — enriches structured events from PostgreSQL and forwards to `metrics.normalized` |
-| `metrics-flink-processor` | Apache Flink job — two pipelines (see below); deployed via `flink run`, not a Spring Boot app |
+| `metrics-flink-processor` | Apache Flink job — three pipelines (see below); deployed via `flink run`, not a Spring Boot app |
 | `metrics-spark-processor` | Spark batch job — reads HDFS text files, parses with regex, writes Parquet; submitted via `spark-submit` |
-| `metrics-api-gateway` | Spring Boot query layer — time-series queries on TimescaleDB, Parquet file listing from MinIO |
+| `metrics-api-gateway` | Spring Boot query layer + Protobuf producer — time-series queries on TimescaleDB, Parquet file listing from MinIO, `POST /api/v1/users/events` publishes Protobuf to `users.events` |
 
 The Flink and Spark modules are fat JARs submitted to their respective clusters. All infrastructure is managed via `docker-compose`.
 
-### Flink Job — Two Pipelines
+### Flink Job — Three Pipelines
 
 **Pipeline 1 (structured metrics):**
 `metrics.normalized` → CDC broadcast enrichment → 1-min tumbling event-time window → TimescaleDB upsert + MinIO Parquet
@@ -118,6 +126,11 @@ The Flink and Spark modules are fat JARs submitted to their respective clusters.
 `logs.raw` → `FileSink` with `DefaultRollingPolicy` (5-min roll / 128 MB) → HDFS path `hdfs://namenode:9000/metrics/logs/raw/year=.../month=.../day=.../hour=.../logs-*.txt`
 
 Files roll every 5 minutes or 128 MB so the Spark job processes bounded hourly batches.
+
+**Pipeline 3 (Protobuf user events via Schema Registry):**
+`users.events` → `ProtobufUserEventDeserializer` → log sink
+
+The deserializer reads the Confluent wire-format header (5 bytes: magic + schema ID), fetches the schema from Confluent Schema Registry via `CachedSchemaRegistryClient` (one HTTP call per schema version), and caches `ParsedSchema` objects in a per-task-slot `Map<Integer, ParsedSchema>`. All subsequent messages for the same schema ID are deserialized from the operator's in-memory cache — no registry calls in the hot path.
 
 ### Key Design Concerns
 
@@ -136,11 +149,15 @@ The Flink `FileSink` writes Parquet-encoded output to MinIO (S3-compatible). Fil
 **CDC with enrichment**
 Debezium captures row-level changes from the PostgreSQL operational database and publishes them to Kafka CDC topics. The Flink job maintains a broadcast state of enrichment tables (e.g., service metadata, user dimensions) and joins incoming metric events against that state before aggregation.
 
+**Protobuf + Schema Registry (Pipeline 3)**
+User events flow from the API Gateway as Protobuf — binary encoding with no field names on the wire. The Confluent Schema Registry sits between the Gateway (`KafkaProtobufSerializer`, auto-registers on first publish) and Flink (`ProtobufUserEventDeserializer`, fetches schema by ID and caches per task slot). The shared `UserEvent` proto is defined in `metrics-proto/src/main/proto/user_event.proto` and compiled to Java by `protobuf-maven-plugin` during `mvn package`.
+
 **Databases and storage**
 - **PostgreSQL** — operational store; source for CDC via Debezium; holds enrichment/reference data (`service_metadata`)
 - **TimescaleDB** — time-series store for pre-aggregated metrics; `metric_aggregates` is a hypertable; used by the API gateway for low-latency range queries
 - **MinIO** — S3-compatible object storage for Parquet files from the structured metrics pipeline
 - **HDFS** — stores raw log text files (from Flink) and structured log Parquet files (from Spark); NameNode web UI at `localhost:9870`; Spark Web UI at `localhost:8888`
+- **Confluent Schema Registry** — stores Protobuf schema for `users.events`; accessed by the API Gateway to register and by Flink to fetch/cache
 
 ## Documentation
 

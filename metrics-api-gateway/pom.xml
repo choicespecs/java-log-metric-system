@@ -44,6 +44,25 @@
             <version>${parquet.version}</version>
         </dependency>
 
+        <!-- Spring Kafka — Protobuf producer to users.events topic -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Confluent Protobuf serializer — registers schema and serializes UserEvent -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-serializer</artifactId>
+            <version>${confluent.version}</version>
+        </dependency>
+
+        <!-- Shared Protobuf-generated UserEvent class -->
+        <dependency>
+            <groupId>com.metrics</groupId>
+            <artifactId>metrics-proto</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -51,6 +70,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

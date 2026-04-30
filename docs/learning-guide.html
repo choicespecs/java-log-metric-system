@@ -110,7 +110,7 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <span style="margin-left:8px">Click any node →</span>
     </div>
 
-    <svg id="svg" viewBox="0 0 1060 610" style="width:100%;min-width:760px">
+    <svg id="svg" viewBox="0 0 1200 610" style="width:100%;min-width:900px">
       <defs>
         <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
           <path d="M0,0 L7,2.5 L0,5 Z" fill="#4b5563"/>
@@ -132,6 +132,9 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
         </marker>
         <marker id="arr-h" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
           <path d="M0,0 L7,2.5 L0,5 Z" fill="#eab308"/>
+        </marker>
+        <marker id="arr-p" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+          <path d="M0,0 L7,2.5 L0,5 Z" fill="#a855f7"/>
         </marker>
       </defs>
 
@@ -157,11 +160,11 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <!-- kafka-cdc → flink (broadcast, dashed) -->
       <path id="p10" class="ep" stroke="#fbbf24" stroke-width="1.2" fill="none" stroke-opacity=".35" stroke-dasharray="5,4" marker-end="url(#arr-y)" d="M827,268 C780,300 650,315 650,318"/>
       <!-- flink → timescale -->
-      <path id="p11" class="ep" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr)" d="M510,376 C470,400 400,420 358,424"/>
+      <path id="p11" class="ep" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr)" d="M510,388 C470,408 400,420 358,424"/>
       <!-- flink → minio -->
-      <path id="p12" class="ep" stroke="#14b8a6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-t)" d="M590,376 C630,405 675,420 692,424"/>
+      <path id="p12" class="ep" stroke="#14b8a6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-t)" d="M590,388 C630,408 675,420 692,424"/>
       <!-- flink → hdfs-raw -->
-      <path id="p13" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M548,376 L545,424"/>
+      <path id="p13" class="ep" stroke="#eab308" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-h)" d="M548,388 L545,424"/>
       <!-- hdfs-raw → spark -->
       <path id="p14" class="ep" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-r)" d="M558,472 C570,495 595,515 600,524"/>
       <!-- spark → hdfs-parquet -->
@@ -170,6 +173,16 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <path id="p16" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-b)" d="M345,472 C325,498 295,518 278,524"/>
       <!-- minio → gateway -->
       <path id="p17" class="ep" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-opacity=".4" marker-end="url(#arr-b)" d="M695,452 C560,480 380,530 342,548"/>
+
+      <!-- Pipeline 3 paths: API Gateway → users.events → Flink, Schema Registry connections -->
+      <!-- gateway → users.events (Protobuf publish) -->
+      <path id="p18" class="ep" stroke="#34d399" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-g)" d="M368,550 C680,555 1016,500 1016,268"/>
+      <!-- users.events → flink (P3 consume) -->
+      <path id="p19" class="ep" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-opacity=".5" marker-end="url(#arr-y)" d="M940,246 C870,260 700,320 658,348"/>
+      <!-- gateway → schema registry (register schema, dashed) -->
+      <path id="p20" class="ep" stroke="#a855f7" stroke-width="1.2" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr-p)" d="M368,562 C680,580 900,530 858,472"/>
+      <!-- flink → schema registry (fetch + cache schema, dashed) -->
+      <path id="p21" class="ep" stroke="#a855f7" stroke-width="1.2" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr-p)" d="M658,358 C760,375 856,415 858,424"/>
 
       <!-- Edge labels -->
       <text x="290" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
@@ -242,10 +255,11 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       </g>
 
       <g id="n-flink" class="node" onclick="pick('flink')">
-        <rect x="452" y="318" width="206" height="58" rx="9" fill="#27140a" stroke="#f59e0b" stroke-width="2"/>
-        <text x="555" y="338" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700">Flink Job</text>
-        <text x="555" y="355" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 1 — windowed aggregation</text>
-        <text x="555" y="368" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 2 — log archival to HDFS</text>
+        <rect x="452" y="318" width="206" height="70" rx="9" fill="#27140a" stroke="#f59e0b" stroke-width="2"/>
+        <text x="555" y="334" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700">Flink Job</text>
+        <text x="555" y="349" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 1 — windowed aggregation</text>
+        <text x="555" y="362" text-anchor="middle" fill="#92400e" font-size="10">Pipeline 2 — log archival to HDFS</text>
+        <text x="555" y="375" text-anchor="middle" fill="#c084fc" font-size="10">Pipeline 3 — user events (Protobuf)</text>
       </g>
 
       <!-- Row 4: storage -->
@@ -292,6 +306,25 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
         <text x="821" y="562" text-anchor="middle" fill="#854d0e" font-size="10">structured log records</text>
       </g>
 
+      <!-- New edge labels for Pipeline 3 -->
+      <text x="780" y="574" fill="#34d399" font-size="9" opacity=".6">Protobuf</text>
+      <text x="900" y="258" fill="#fbbf24" font-size="9" opacity=".6">P3</text>
+      <text x="700" y="595" fill="#a855f7" font-size="9" opacity=".5">register</text>
+      <text x="714" y="378" fill="#a855f7" font-size="9" opacity=".5">schema cache</text>
+
+      <!-- New nodes: users.events Kafka topic and Confluent Schema Registry -->
+      <g id="n-kuserevents" class="node" onclick="pick('kuserevents')">
+        <rect x="940" y="224" width="152" height="44" rx="7" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
+        <text x="1016" y="241" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">users.events</text>
+        <text x="1016" y="256" text-anchor="middle" fill="#064e3b" font-size="10">Kafka · Protobuf</text>
+      </g>
+
+      <g id="n-schemareg" class="node" onclick="pick('schemareg')">
+        <rect x="858" y="424" width="170" height="48" rx="7" fill="#1a0a2e" stroke="#a855f7" stroke-width="1.5"/>
+        <text x="943" y="444" text-anchor="middle" fill="#c084fc" font-size="12" font-weight="600">Schema Registry</text>
+        <text x="943" y="460" text-anchor="middle" fill="#4c1d95" font-size="10">Confluent · :8081</text>
+      </g>
+
       <!-- Animated packets layer -->
       <g id="pkts"></g>
     </svg>
@@ -309,6 +342,7 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
     <button class="jbtn" onclick="pickJourney(1,this)">📝 Raw Log → Parquet</button>
     <button class="jbtn" onclick="pickJourney(2,this)">🔄 CDC Enrichment</button>
     <button class="jbtn" onclick="pickJourney(3,this)">🔍 API Query</button>
+    <button class="jbtn" onclick="pickJourney(4,this)">🔵 Protobuf User Event</button>
   </div>
   <div class="journey-body" id="journey-body"></div>
 </div>
@@ -355,8 +389,8 @@ const INFO = {
     props:[["Port","8082"],["Consumers","metrics.structured, logs.raw"],["Produces","metrics.normalized"],["Cache","Caffeine 500 entries / 10 min TTL"],["DB","PostgreSQL :5432"]],
     code:`// EnrichmentService — DB lookup is @Cacheable\nServiceMetadata meta = repo.findById(event.getServiceId())\n    .orElse(defaults);\nreturn NormalizedMetric.from(event, meta);`},
   flink:{title:"Flink Job — metrics-flink-processor",badge:"Apache Flink 1.18",bc:"b-orange",
-    desc:"Fat JAR (no Spring) submitted via flink run. Runs two completely independent streaming pipelines in one job. Checkpoints every 60s for exactly-once guarantees.",
-    props:[["P1 source","metrics.normalized (Kafka)"],["P1 window","1-min tumbling, event time"],["P1 watermark","5s bounded out-of-orderness"],["P1 sinks","TimescaleDB + MinIO Parquet"],["P2 source","logs.raw (Kafka)"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["Checkpointing","60s"]],
+    desc:"Fat JAR (no Spring) submitted via flink run. Runs THREE independent streaming pipelines in one job. Checkpoints every 60s for exactly-once guarantees.",
+    props:[["P1 source","metrics.normalized (Kafka)"],["P1 window","1-min tumbling, event time"],["P1 watermark","5s bounded out-of-orderness"],["P1 sinks","TimescaleDB + MinIO Parquet"],["P2 source","logs.raw (Kafka)"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["P3 source","users.events (Kafka / Protobuf)"],["P3 deser","ProtobufUserEventDeserializer"],["P3 schema","CachedSchemaRegistryClient + operator Map cache"],["Checkpointing","60s"]],
     code:`// Pipeline 2 rolling text sink\nFileSink.<String>forRowFormat(\n    new Path(hdfsLogsOutputPath),\n    new SimpleStringEncoder<>("UTF-8"))\n  .withRollingPolicy(\n    DefaultRollingPolicy.builder()\n      .withRolloverInterval(Duration.ofMinutes(5))\n      .withMaxPartSize(MemorySize.ofMebiBytes(128))\n      .build())\n  .withBucketAssigner(\n    new DateTimeBucketAssigner<>("'year='yyyy/'month='MM/..."))\n  .build();`},
   postgres:{title:"PostgreSQL",badge:"Database :5432",bc:"b-purple",
     desc:"Dual role: enrichment reference store (service_metadata table) and CDC source. WAL logical replication enabled so Debezium tails row-level changes in real time. Managed by Flyway migrations in metrics-processor.",
@@ -381,7 +415,18 @@ const INFO = {
     code:`// Regex extracts: timestamp, level, service_id, message\n"(\\d{4}-\\d{2}-\\d{2}T[\\d:.]+Z)\\s+\\[(\\w+)]\\s+\\[([^\\]]+)]\\s+(.*)"\n\nparsed.write()\n  .mode(SaveMode.Append)\n  .partitionBy("level","date")\n  .parquet(outputPath);`},
   hdfspar:{title:"HDFS — Structured Parquet",badge:"HDFS Storage",bc:"b-yellow",
     desc:"Analytical output of the Spark job. Every log line that matched the regex is stored as a structured Parquet record. Partition pruning on level and date makes analytical queries fast.",
-    props:[["Path","hdfs://namenode:9000/metrics/logs/parquet/"],["Partitions","level=INFO/date=YYYY-MM-DD/"],["Columns","timestamp, level, service_id, message, raw_line, date"],["Query with","Spark SQL, Hive, Trino/Presto"]]}
+    props:[["Path","hdfs://namenode:9000/metrics/logs/parquet/"],["Partitions","level=INFO/date=YYYY-MM-DD/"],["Columns","timestamp, level, service_id, message, raw_line, date"],["Query with","Spark SQL, Hive, Trino/Presto"]]},
+  kuserevents:{title:"users.events",badge:"Kafka Topic",bc:"b-green",
+    desc:"Protobuf-encoded user interaction events published by the API Gateway. Binary Protobuf eliminates field-name overhead vs JSON — a UserEvent with 7 fields compresses from ~150 bytes (JSON) to ~40 bytes (Protobuf). The Confluent wire format prepends a 5-byte header (magic byte 0x00 + 4-byte schema ID) before the serialized bytes.",
+    props:[["Producer","API Gateway (KafkaProtobufSerializer)"],["Consumer","Flink Pipeline 3"],["Key","userId (partition affinity per user)"],["Value","Protobuf — UserEvent"],["Schema","auto-registered in Schema Registry on first publish"],["Partitions","3"]],
+    code:`// Confluent wire format per message:\n// Byte 0:    0x00  (magic)\n// Bytes 1-4: schema ID (big-endian int)\n// Bytes 5+:  message-index array (varint) + Protobuf bytes\n\n// Gateway publishes:\nkafkaTemplate.send("users.events", event.getUserId(), protoEvent);`},
+  schemareg:{title:"Confluent Schema Registry",badge:"Schema Store :8081",bc:"b-purple",
+    desc:"Central schema store shared between the API Gateway (producer) and Flink (consumer). The Gateway's KafkaProtobufSerializer auto-registers the UserEvent schema on first publish. Flink's ProtobufUserEventDeserializer reads the 4-byte schema ID from the Confluent wire-format header, fetches the schema from the registry once via CachedSchemaRegistryClient, then caches it in operator memory — all subsequent messages for that schema version skip the registry call entirely.",
+    props:[["Port","8081"],["Image","confluentinc/cp-schema-registry:7.5.0"],["Registration","auto on first Gateway publish"],["Consumer cache","CachedSchemaRegistryClient (HTTP layer)"],["Operator cache","Map<schemaId,ParsedSchema> per task slot"],["Effect","zero registry calls after first message per schema"]]},
+  gateway:{title:"API Gateway — metrics-api-gateway",badge:"Spring Boot :8083",bc:"b-blue",
+    desc:"REST query layer AND Protobuf event producer. Uses raw JdbcTemplate for TimescaleDB queries. Publishes UserEvent Protobuf messages to users.events via KafkaProtobufSerializer, which auto-registers the schema and prepends the Confluent header.",
+    props:[["Port","8083"],["GET /query/timeseries","aggregated metric range"],["GET /query/series","time-series data points"],["GET /query/files","MinIO Parquet listing"],["POST /users/events","publish Protobuf UserEvent"],["DB","TimescaleDB :5433"],["Kafka","Protobuf producer → users.events"]],
+    code:`POST /api/v1/users/events\n{\n  "userId": "u-123",\n  "eventType": "LOGIN",\n  "serviceId": "svc-auth",\n  "environment": "production",\n  "properties": {"ip": "1.2.3.4", "device": "mobile"}\n}`}
 };
 
 // ─── JOURNEYS ─────────────────────────────────────────────────────────────────
@@ -418,6 +463,18 @@ const JOURNEYS = [
     {icon:"🔗",t:"Metrics enriched in-stream",d:"When a <code>NormalizedMetric</code> arrives, <code>processElement()</code> looks up the serviceId in broadcast state and overwrites serviceName/team/environment/region if a newer entry exists — zero DB calls in the aggregation hot path."},
     {icon:"✅",t:"Why this matters",d:"Without CDC: a service renamed in PostgreSQL would produce stale metrics until the Caffeine cache expires (10 min). With CDC: Flink's broadcast state reflects the change within seconds of the DB write."},
   ]},
+  {title:"🔵 Protobuf User Event Journey",sub:"How user data flows from the API Gateway to Flink with zero field-key overhead via Schema Registry",steps:[
+    {icon:"📝",t:"Client POSTs a user event",d:"A service calls <code>POST /api/v1/users/events</code> on the <b>API Gateway</b> with a JSON body containing userId, eventType, serviceId, and optional properties. No Protobuf knowledge is needed on the client side."},
+    {icon:"🔨",t:"Gateway builds a Protobuf message",d:"<b>UserEventPublisherService</b> constructs a <code>UserEvent</code> Protobuf message using the generated builder. Protobuf encodes only field numbers (1, 2, 3…) and values — no field names — shrinking the payload from ~150 bytes (JSON) to ~40 bytes."},
+    {icon:"📌",t:"KafkaProtobufSerializer registers the schema",d:"On <b>first publish</b>, <code>KafkaProtobufSerializer</code> POSTs the <code>UserEvent</code> Protobuf file descriptor to <b>Confluent Schema Registry</b> (POST /subjects/users.events-value/versions). The registry returns a numeric schema ID, e.g. <code>3</code>. All future publishes of the same schema reuse that ID — no re-registration."},
+    {icon:"📤",t:"Message published with Confluent wire format",d:"The serializer prepends a 5-byte Confluent header: <code>[0x00][schema-id 4B]</code>, followed by a varint message-index array and then the raw Protobuf bytes. The Kafka key is <code>userId</code> — all events for a given user land on the same partition."},
+    {icon:"📨",t:"users.events topic buffers the message",d:"The Protobuf message lands on the <b>users.events</b> Kafka topic. Consumer lag here does not block ingestion — the API Gateway returns HTTP 202 immediately after the send."},
+    {icon:"⚡",t:"Flink Pipeline 3 reads the message",d:"Flink's <code>KafkaSource&lt;UserEvent&gt;</code> (group id <code>flink-metrics-processor-user-events</code>) consumes from <b>users.events</b>. The source uses <b>ProtobufUserEventDeserializer</b> which implements <code>KafkaRecordDeserializationSchema</code>."},
+    {icon:"🔍",t:"Deserializer reads the Confluent header",d:"The deserializer strips the 5-byte Confluent header, extracting the <b>schema ID</b>. It then checks its <b>operator-level cache</b> (<code>Map&lt;Integer, ParsedSchema&gt;</code>) for that schema ID."},
+    {icon:"🧠",t:"Schema cached — registry call happens only once",d:"On <b>first message for a schema ID</b>: <code>CachedSchemaRegistryClient.getSchemaById(id)</code> makes one HTTP GET to Schema Registry and stores the result. The <code>ParsedSchema</code> is then also stored in the operator's local <code>schemaCache</code> map. <b>All subsequent messages</b> for the same schema ID are served purely from memory — zero HTTP calls."},
+    {icon:"🔓",t:"Protobuf bytes deserialized to UserEvent",d:"After skipping the message-index varint array (a single <code>0x00</code> for a single-message .proto), the remaining bytes are passed to <code>UserEvent.parseFrom(protoBytes)</code>. The generated class handles all field mapping by field number."},
+    {icon:"🔮",t:"Schema evolution is safe",d:"If a new field is added to the <code>UserEvent</code> proto (e.g. <code>string ip_address = 8</code>), a new schema version is registered with a new ID. Old Flink instances see the old ID and deserialize fine; new instances see the new ID. The Schema Registry enforces backward/forward compatibility rules."},
+  ]},
   {title:"🔍 API Query Journey",sub:"How a client fetches aggregated time-series metrics",steps:[
     {icon:"📡",t:"Client issues GET request",d:"A dashboard calls: <code>GET /api/v1/query/timeseries?metricName=http.request.duration&serviceId=svc-api&from=2024-01-15T00:00:00Z&to=2024-01-15T01:00:00Z</code>"},
     {icon:"✅",t:"Input validation",d:"API Gateway validates <code>from.isBefore(to)</code>. If not, returns <code>400 Bad Request</code>. <code>@DateTimeFormat(iso=ISO.DATE_TIME)</code> handles ISO-8601 parsing."},
@@ -436,14 +493,14 @@ const COMPS = [
    desc:"Dual Kafka consumer — enriches events from PostgreSQL (cached) and forwards to metrics.normalized.",
    rows:[["StructuredMetricsConsumer","metrics.structured → enrich → normalize"],["RawLogConsumer","logs.raw → regex parse → normalize"],["Cache","Caffeine, 500 entries, 10 min TTL"],["Flyway","V1__init.sql seeds service_metadata"]]},
   {title:"metrics-flink-processor",badge:"Flink 1.18",bc:"b-orange",port:"flink run",
-   desc:"Fat JAR with two pipelines: windowed aggregation (P1) and raw log HDFS archival (P2).",
-   rows:[["P1 window","1-min tumbling, event time"],["P1 sinks","TimescaleDB upsert + MinIO Parquet"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["CDC","broadcast state enrichment"],["Checkpoint","60s (exactly-once)"]]},
+   desc:"Fat JAR with three pipelines: windowed aggregation (P1), raw log HDFS archival (P2), and Protobuf user events via Schema Registry (P3).",
+   rows:[["P1 window","1-min tumbling, event time"],["P1 sinks","TimescaleDB upsert + MinIO Parquet"],["P2 sink","HDFS rolling .txt (5 min / 128 MB)"],["P3 source","users.events (Protobuf)"],["P3 deser","ProtobufUserEventDeserializer + schema cache"],["Checkpoint","60s (exactly-once)"]]},
   {title:"metrics-spark-processor",badge:"Spark 3.5",bc:"b-red",port:"spark-submit",
    desc:"Batch job: reads HDFS raw .txt log files, applies regex, writes structured Parquet.",
    rows:[["Input","HDFS /metrics/logs/raw/**/*.txt"],["Regex groups","timestamp, level, service_id, message"],["Filter","drop lines without timestamp match"],["Output","HDFS /metrics/logs/parquet/ (level/date)"],["Mode","Append"]]},
   {title:"metrics-api-gateway",badge:"Spring Boot",bc:"b-blue",port:"8083",
-   desc:"REST query layer over TimescaleDB and MinIO. Raw JdbcTemplate for hypertable queries.",
-   rows:[["GET /query/timeseries","aggregated metric range query"],["GET /query/series","time-series data points"],["GET /query/files","MinIO Parquet file listing"],["Validation","from.isBefore(to) or 400"]]},
+   desc:"REST query layer AND Protobuf event producer. JdbcTemplate for TimescaleDB; KafkaProtobufSerializer for publishing UserEvent to users.events.",
+   rows:[["GET /query/timeseries","aggregated metric range query"],["GET /query/series","time-series data points"],["GET /query/files","MinIO Parquet file listing"],["POST /users/events","publish Protobuf UserEvent"],["Kafka","KafkaProtobufSerializer → users.events"],["Validation","from.isBefore(to) or 400"]]},
   {title:"PostgreSQL",badge:"Database",bc:"b-purple",port:"5432",
    desc:"Enrichment reference store and Debezium CDC source. WAL logical replication enabled.",
    rows:[["Key table","service_metadata (serviceId → metadata)"],["WAL level","logical (CDC prerequisite)"],["Managed by","Flyway in metrics-processor"],["Seeds","svc-api, svc-worker, svc-unknown"]]},
@@ -451,8 +508,11 @@ const COMPS = [
    desc:"PostgreSQL + time-series extension. metric_aggregates is a hypertable. DDL run manually.",
    rows:[["Hypertable","metric_aggregates on window_start"],["Written by","Flink JDBC upsert"],["Read by","API Gateway JdbcTemplate"],["DDL","run manually before Flink job start"]]},
   {title:"Apache Kafka",badge:"Message Bus",bc:"b-green",port:"9092",
-   desc:"Central data bus. 4 topics. AUTO_CREATE_TOPICS disabled — create topics explicitly.",
-   rows:[["metrics.structured","collector → processor"],["logs.raw","collector → Flink P2"],["metrics.normalized","processor → Flink P1"],["cdc.public.service_metadata","Debezium → Flink broadcast"]]},
+   desc:"Central data bus. 5 topics. AUTO_CREATE_TOPICS disabled — create topics explicitly.",
+   rows:[["metrics.structured","collector → processor"],["logs.raw","collector → Flink P2"],["metrics.normalized","processor → Flink P1"],["cdc.public.service_metadata","Debezium → Flink broadcast"],["users.events","API Gateway → Flink P3 (Protobuf)"]]},
+  {title:"Confluent Schema Registry",badge:"Schema Store",bc:"b-purple",port:"8081",
+   desc:"Stores Protobuf (and Avro) schemas with versioning and compatibility enforcement. The API Gateway auto-registers the UserEvent schema on first publish. Flink fetches schemas by ID from the Confluent wire-format header and caches them in operator memory.",
+   rows:[["Port","8081"],["Image","cp-schema-registry:7.5.0"],["API","REST — /subjects, /schemas/ids/:id"],["Producer client","KafkaProtobufSerializer (auto-register)"],["Consumer client","CachedSchemaRegistryClient"],["Flink cache","Map<schemaId,ParsedSchema> per task slot"]]},
   {title:"MinIO",badge:"Object Storage",bc:"b-teal",port:"9000/9001",
    desc:"S3-compatible store for structured metrics Parquet from Flink P1. Console at :9001.",
    rows:[["Bucket","metrics-parquet"],["Path","environment/YYYY-MM-DD/part-*.parquet"],["Console","localhost:9001"],["Credentials","minioadmin/minioadmin (dev only)"]]},
@@ -478,6 +538,9 @@ const KTOPICS = [
   {name:"cdc.public.service_metadata",prod:"Debezium (Kafka Connect)",cons:"Flink broadcast state",key:"serviceId",val:"JSON — CdcEvent",
    why:"Enables Flink to maintain a live copy of the enrichment table in broadcast state across all task slots — zero DB calls in the hot aggregation path.",
    fields:["operation: String (c/u/d/r)","serviceId: String","serviceName: String","team: String","environment: String","region: String"]},
+  {name:"users.events",prod:"API Gateway (KafkaProtobufSerializer)",cons:"Flink Pipeline 3",key:"userId",val:"Protobuf — UserEvent (Confluent wire format)",
+   why:"Protobuf binary encoding omits field names entirely — only field numbers travel on the wire. The 5-byte Confluent header (magic + schema ID) lets Flink look up the exact schema version without embedding it in every message, giving both compactness and schema evolution safety.",
+   fields:["user_id: string (field 1)","event_type: string (field 2)","timestamp_ms: int64 (field 3)","service_id: string (field 4)","session_id: string (field 5)","environment: string (field 6)","properties: map<string,string> (field 7)"]},
 ];
 
 // ─── ANIMATION ────────────────────────────────────────────────────────────────
@@ -487,6 +550,7 @@ const PATHS_ANIM = [
   {id:'p8',col:'#fbbf24'},{id:'p9',col:'#fbbf24'},{id:'p11',col:'#a78bfa'},
   {id:'p12',col:'#14b8a6'},{id:'p13',col:'#eab308'},{id:'p14',col:'#ef4444'},
   {id:'p15',col:'#eab308'},{id:'p16',col:'#3b82f6'},{id:'p7',col:'#34d399'},
+  {id:'p18',col:'#34d399'},{id:'p19',col:'#fbbf24'},
 ];
 let pkts=[];
 function spawnPkt(){
