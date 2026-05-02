@@ -147,7 +147,7 @@ public class ExternalDataProcessor {
      * </ol>
      */
     static Dataset<Row> transform(SparkSession spark, Dataset<Row> raw) {
-        if (!raw.columns().length.equals(0) && hasColumn(raw, "_data")) {
+        if (raw.columns().length != 0 && hasColumn(raw, "_data")) {
             StructType dataType = raw.schema();
             StructField dataField = dataType.apply("_data");
 

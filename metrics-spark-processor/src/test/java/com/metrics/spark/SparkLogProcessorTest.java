@@ -25,6 +25,7 @@ public class SparkLogProcessorTest {
                 .appName("SparkLogProcessorTest")
                 .master("local[1]")
                 .config("spark.sql.shuffle.partitions", "1")
+                .config("spark.ui.enabled", "false")
                 .getOrCreate();
         spark.sparkContext().setLogLevel("WARN");
     }
