@@ -187,20 +187,20 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <path id="p21" class="ep" stroke="#a855f7" stroke-width="1.2" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr-p)" d="M658,358 C760,375 856,415 858,424"/>
 
       <!-- Edge labels -->
-      <text x="290" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
-      <text x="440" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
-      <text x="113" y="302" fill="#34d399" font-size="9" opacity=".6">consume</text>
-      <text x="118" y="400" fill="#a78bfa" font-size="9" opacity=".6" transform="rotate(-50,118,400)">enrich lookup</text>
-      <text x="355" y="322" fill="#34d399" font-size="9" opacity=".6">normalized</text>
-      <text x="350" y="374" fill="#a16207" font-size="9" opacity=".6">Debezium CDC</text>
-      <text x="468" y="306" fill="#fbbf24" font-size="9" opacity=".6">P2</text>
-      <text x="574" y="298" fill="#fbbf24" font-size="9" opacity=".6">P1</text>
-      <text x="700" y="310" fill="#fbbf24" font-size="9" opacity=".6">broadcast</text>
-      <text x="400" y="412" fill="#a78bfa" font-size="9" opacity=".6">JDBC upsert</text>
-      <text x="628" y="408" fill="#14b8a6" font-size="9" opacity=".6">Parquet FileSink</text>
-      <text x="548" y="408" fill="#a16207" font-size="9" opacity=".6">rolling txt</text>
-      <text x="572" y="505" fill="#ef4444" font-size="9" opacity=".6">batch read</text>
-      <text x="695" y="542" fill="#a16207" font-size="9" opacity=".6">write Parquet</text>
+      <text id="el-p2" x="290" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
+      <text id="el-p3" x="440" y="197" fill="#34d399" font-size="9" opacity=".6">publish</text>
+      <text id="el-p4" x="113" y="302" fill="#34d399" font-size="9" opacity=".6">consume</text>
+      <text id="el-p5" x="118" y="400" fill="#a78bfa" font-size="9" opacity=".6" transform="rotate(-50,118,400)">enrich lookup</text>
+      <text id="el-p6" x="355" y="322" fill="#34d399" font-size="9" opacity=".6">normalized</text>
+      <text id="el-p7" x="350" y="374" fill="#a16207" font-size="9" opacity=".6">Debezium CDC</text>
+      <text id="el-p8" x="468" y="306" fill="#fbbf24" font-size="9" opacity=".6">P2</text>
+      <text id="el-p9" x="574" y="298" fill="#fbbf24" font-size="9" opacity=".6">P1</text>
+      <text id="el-p10" x="700" y="310" fill="#fbbf24" font-size="9" opacity=".6">broadcast</text>
+      <text id="el-p11" x="400" y="412" fill="#a78bfa" font-size="9" opacity=".6">JDBC upsert</text>
+      <text id="el-p12" x="628" y="408" fill="#14b8a6" font-size="9" opacity=".6">Parquet FileSink</text>
+      <text id="el-p13" x="548" y="408" fill="#a16207" font-size="9" opacity=".6">rolling txt</text>
+      <text id="el-p14" x="572" y="505" fill="#ef4444" font-size="9" opacity=".6">batch read</text>
+      <text id="el-p15" x="695" y="542" fill="#a16207" font-size="9" opacity=".6">write Parquet</text>
 
       <!-- ── NODES ── -->
 
@@ -323,16 +323,16 @@ pre{background:var(--surface2);padding:11px;border-radius:7px;font-size:11px;ove
       <path id="p27" class="ep" stroke="#14b8a6" stroke-width="1.4" fill="none" stroke-opacity=".4" stroke-dasharray="5,4" marker-end="url(#arr-t)" d="M1100,540 C1020,500 890,460 812,448"/>
 
       <!-- Edge labels for Pipeline 3 -->
-      <text x="780" y="574" fill="#34d399" font-size="9" opacity=".6">Protobuf</text>
-      <text x="900" y="258" fill="#fbbf24" font-size="9" opacity=".6">P3</text>
-      <text x="700" y="595" fill="#a855f7" font-size="9" opacity=".5">register</text>
-      <text x="714" y="378" fill="#a855f7" font-size="9" opacity=".5">schema cache</text>
+      <text id="el-p18" x="780" y="574" fill="#34d399" font-size="9" opacity=".6">Protobuf</text>
+      <text id="el-p19" x="900" y="258" fill="#fbbf24" font-size="9" opacity=".6">P3</text>
+      <text id="el-p20" x="700" y="595" fill="#a855f7" font-size="9" opacity=".5">register</text>
+      <text id="el-p21" x="714" y="378" fill="#a855f7" font-size="9" opacity=".5">schema cache</text>
       <!-- Edge labels for Pipeline 4 -->
-      <text x="820" y="82" fill="#34d399" font-size="9" opacity=".6">JSON ingest</text>
-      <text x="1050" y="258" fill="#fbbf24" font-size="9" opacity=".6">P4</text>
-      <text x="845" y="366" fill="#a16207" font-size="9" opacity=".6">NDJSON files</text>
-      <text x="990" y="562" fill="#a16207" font-size="9" opacity=".6">Parquet</text>
-      <text x="955" y="484" fill="#0f766e" font-size="9" opacity=".5">S3 (opt.)</text>
+      <text id="el-p22" x="820" y="82" fill="#34d399" font-size="9" opacity=".6">JSON ingest</text>
+      <text id="el-p23" x="1050" y="258" fill="#fbbf24" font-size="9" opacity=".6">P4</text>
+      <text id="el-p24" x="845" y="366" fill="#a16207" font-size="9" opacity=".6">NDJSON files</text>
+      <text id="el-p26" x="990" y="562" fill="#a16207" font-size="9" opacity=".6">Parquet</text>
+      <text id="el-p27" x="955" y="484" fill="#0f766e" font-size="9" opacity=".5">S3 (opt.)</text>
 
       <!-- New nodes: users.events Kafka topic and Confluent Schema Registry -->
       <g id="n-kuserevents" class="node" onmousedown="startNodeDrag(event,'kuserevents')" onclick="nodeClick(event,'kuserevents')">
@@ -718,6 +718,49 @@ const EDGE_NODES = {
 const nodeOff = {};
 let _drag = null, _suppressClick = false;
 
+// ─── EDGE LABEL TRACKING ──────────────────────────────────────────────────────
+const LABEL_PATH = {
+  'el-p2':'p2',  'el-p3':'p3',  'el-p4':'p4',  'el-p5':'p5',
+  'el-p6':'p6',  'el-p7':'p7',  'el-p8':'p8',  'el-p9':'p9',
+  'el-p10':'p10','el-p11':'p11','el-p12':'p12','el-p13':'p13',
+  'el-p14':'p14','el-p15':'p15','el-p18':'p18','el-p19':'p19',
+  'el-p20':'p20','el-p21':'p21','el-p22':'p22','el-p23':'p23',
+  'el-p24':'p24','el-p26':'p26','el-p27':'p27',
+};
+const _labelOff = {};
+
+function _initLabelOffsets() {
+  Object.entries(LABEL_PATH).forEach(([lid, pid]) => {
+    const lel = document.getElementById(lid);
+    const pel = document.getElementById(pid);
+    if (!lel || !pel) return;
+    const mid = pel.getPointAtLength(pel.getTotalLength() * 0.5);
+    _labelOff[lid] = {
+      dx: parseFloat(lel.getAttribute('x')) - mid.x,
+      dy: parseFloat(lel.getAttribute('y')) - mid.y,
+    };
+  });
+}
+
+function _updateLabels(pid) {
+  Object.entries(LABEL_PATH).forEach(([lid, lpid]) => {
+    if (lpid !== pid) return;
+    const lel = document.getElementById(lid);
+    const pel = document.getElementById(pid);
+    if (!lel || !pel || !_labelOff[lid]) return;
+    const mid = pel.getPointAtLength(pel.getTotalLength() * 0.5);
+    const nx = mid.x + _labelOff[lid].dx;
+    const ny = mid.y + _labelOff[lid].dy;
+    lel.setAttribute('x', nx);
+    lel.setAttribute('y', ny);
+    const tr = lel.getAttribute('transform');
+    if (tr && /rotate/.test(tr)) {
+      const m = tr.match(/rotate\(([^,)]+)/);
+      if (m) lel.setAttribute('transform', `rotate(${m[1]},${nx},${ny})`);
+    }
+  });
+}
+
 function _svgPt(e) {
   const svg = document.getElementById('svg');
   const pt = svg.createSVGPoint();
@@ -744,6 +787,7 @@ function _updateEdges(id) {
     const fo = nodeOff[from] || {dx:0,dy:0};
     const to_ = nodeOff[to]  || {dx:0,dy:0};
     el.setAttribute('d', _pathTransform(el.dataset.d0, fo.dx, fo.dy, to_.dx, to_.dy));
+    _updateLabels(pid);
   });
 }
 
@@ -781,6 +825,7 @@ function nodeClick(e, id) {
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 renderJourney(0);
+_initLabelOffsets();
 animate();
 </script>
 </body>
